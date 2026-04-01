@@ -90,36 +90,68 @@ python3 HealthCyclingAnalyzer.py
 ### 方式二：macOS 桌面应用
 
 ```bash
-# 安装 PyInstaller
-pip install pyinstaller
+# 安装依赖
+pip install pyinstaller customtkinter tkinterdnd2
 
 # 构建 .app
 pyinstaller build.spec --clean -y
 ```
 
-构建完成后在 `dist/` 目录下找到 `健康数据分析.app`，双击运行。
+构建完成后在 `dist/` 目录下找到 `Apple Health Analyzer.app`，双击运行。
 
 ### 方式三：Windows
 
-参考 `build_windows.bat`，使用 PyInstaller 构建 `.exe` 文件。
+```bash
+# 直接运行批处理脚本（自动安装依赖并构建）
+build_windows.bat
+```
+
+构建完成后在 `dist\Apple Health Analyzer\` 目录下找到可执行文件。
 
 ---
 
-## 数据来源
+## 数据导出指南
 
-从 iPhone 的 **健康** App 导出数据：
+### 第一步：从 iPhone 导出健康数据
 
-1. 打开「健康」App
-2. 点击右上角头像
-3. 滑到底部，点击「导出所有健康数据」
-4. 等待导出完成，通过 AirDrop 或其他方式传到电脑
-5. 解压得到 `apple_health_export` 文件夹
+1. 打开 iPhone 上的 **「健康」** App（白底红心图标）
+2. 点击右上角 **个人头像**
+3. 滚动到页面最底部，点击 **「导出所有健康数据」**
+4. 系统会提示"正在准备导出数据"，根据数据量可能需要 **1-10 分钟**
+5. 导出完成后弹出分享菜单
 
-程序会读取以下数据：
+### 第二步：传输到电脑
 
-| 数据类型 | 来源 |
-|---------|------|
-| 骑行/力训/其他运动 | `Workout` 元素 |
+| 方式 | 说明 |
+|------|------|
+| **AirDrop**（推荐） | Mac 用户最快的方式，直接发送到电脑 |
+| **隔空投送到文件** | 保存到"文件" App，通过 iCloud Drive 同步 |
+| **邮件 / 微信** | 通过邮件或微信发送（文件可能较大，约 50-200MB） |
+| **数据线** | 连接电脑，通过 Finder / iTunes 传输 |
+
+### 第三步：解压并使用
+
+1. 收到的文件名为 `导出.zip`
+2. **双击解压**，得到 `apple_health_export` 文件夹
+3. 文件夹内包含：
+   ```
+   apple_health_export/
+   ├── 导出.xml          ← 主数据文件（所有健康记录）
+   ├── 导出_cda.xml      ← 临床数据（可忽略）
+   └── workout-routes/   ← GPS 路线数据
+       ├── route_2026-01-05.gpx
+       ├── route_2026-01-06.gpx
+       └── ...
+   ```
+4. 运行本程序，**选择 `apple_health_export` 文件夹**即可
+
+> **提示**：导出的 XML 文件可能很大（100MB-1GB+），解析需要几十秒到几分钟，请耐心等待。
+
+### 程序读取的数据
+
+| 数据类型 | Apple Health 标识 |
+|---------|------------------|
+| 骑行 / 力训 / 其他运动 | `Workout` 元素 + `WorkoutStatistics` |
 | GPS 路线 & 实时速度 | `workout-routes/*.gpx` |
 | 静息心率 | `RestingHeartRate` |
 | 心率变异性 (HRV) | `HeartRateVariabilitySDNN` |
@@ -135,11 +167,13 @@ pyinstaller build.spec --clean -y
 
 | 组件 | 技术 |
 |------|------|
+| 桌面 GUI | [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) — macOS / Windows 11 原生风格自适应 |
 | 数据解析 | Python 3 标准库（`xml.etree.ElementTree`） |
 | 路线分析 | Haversine 距离计算 + 坐标聚类 |
 | 可视化 | [Chart.js 4.4](https://www.chartjs.org/)（内嵌，零 CDN 依赖） |
 | 前端设计 | Apple Design 风格（SF Pro 字体、Apple Health 配色、圆角卡片） |
 | 图标系统 | 内嵌 SVG 图标徽章（Lucide 风格） |
+| 拖拽支持 | [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2) — 文件夹拖放识别 |
 | 桌面打包 | PyInstaller |
 
 ---

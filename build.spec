@@ -1,15 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import customtkinter
 
 block_cipher = None
 work_dir = os.path.dirname(os.path.abspath(SPEC))
+ctk_path = os.path.dirname(customtkinter.__file__)
 
 a = Analysis(
     [os.path.join(work_dir, 'HealthCyclingAnalyzer.py')],
     pathex=[work_dir],
     binaries=[],
-    datas=[(os.path.join(work_dir, 'dashboard.html'), '.')],
-    hiddenimports=['tkinter', 'tkinter.filedialog', 'tkinter.messagebox'],
+    datas=[
+        (os.path.join(work_dir, 'dashboard.html'), '.'),
+        (ctk_path, 'customtkinter'),
+    ],
+    hiddenimports=[
+        'tkinter', 'tkinter.filedialog', 'tkinter.messagebox',
+        'customtkinter', 'darkdetect',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -53,12 +61,12 @@ coll = COLLECT(
 
 app = BUNDLE(
     coll,
-    name='健康骑行分析器.app',
+    name='Apple Health Analyzer.app',
     icon=None,
-    bundle_identifier='com.health.cycling.analyzer',
+    bundle_identifier='com.health.analyzer',
     info_plist={
         'NSHighResolutionCapable': True,
-        'CFBundleShortVersionString': '1.0.0',
-        'CFBundleName': '健康骑行分析器',
+        'CFBundleShortVersionString': '2.0.0',
+        'CFBundleName': 'Apple Health Analyzer',
     },
 )

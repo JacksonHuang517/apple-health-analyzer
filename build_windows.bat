@@ -1,7 +1,7 @@
 @echo off
 chcp 65001
 echo ===========================
-echo  健康骑行分析器 Windows 构建
+echo  Apple Health Analyzer - Windows Build
 echo ===========================
 echo.
 
@@ -10,18 +10,24 @@ python -m venv venv
 call venv\Scripts\activate.bat
 
 REM 安装依赖
-pip install pyinstaller -i https://mirrors.aliyun.com/pypi/simple/
+pip install pyinstaller customtkinter tkinterdnd2 -i https://mirrors.aliyun.com/pypi/simple/
+
+REM 获取 customtkinter 路径
+for /f "tokens=*" %%i in ('python -c "import customtkinter, os; print(os.path.dirname(customtkinter.__file__))"') do set CTK_PATH=%%i
 
 REM 构建 exe
-pyinstaller --name "HealthCyclingAnalyzer" ^
+pyinstaller --name "Apple Health Analyzer" ^
   --windowed ^
   --add-data "dashboard.html;." ^
+  --add-data "%CTK_PATH%;customtkinter" ^
   --hidden-import tkinter ^
   --hidden-import tkinter.filedialog ^
   --hidden-import tkinter.messagebox ^
+  --hidden-import customtkinter ^
+  --hidden-import darkdetect ^
   --clean -y ^
   HealthCyclingAnalyzer.py
 
 echo.
-echo 构建完成！exe 位于 dist\HealthCyclingAnalyzer\ 目录
+echo Build complete! exe is in dist\Apple Health Analyzer\ directory
 pause
