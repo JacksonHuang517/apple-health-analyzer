@@ -276,7 +276,7 @@ def run_gui():
     ctk.set_appearance_mode("light")
     ctk.set_default_color_theme("blue")
 
-    # Platform-aware colors
+    # Platform-aware colors & fonts
     if IS_MAC:
         BG = "#f5f5f7"
         CARD = "#ffffff"
@@ -285,8 +285,8 @@ def run_gui():
         ACCENT = "#0071e3"
         TEXT = "#1d1d1f"
         TEXT_DIM = "#86868b"
-        FONT_FAMILY = "SF Pro Display"
-        FONT_BODY = "SF Pro Text"
+        FONT_FAMILY = "Helvetica Neue"
+        FONT_BODY = "Helvetica Neue"
         WIN_W, WIN_H = 580, 520
     else:
         BG = "#f3f3f3"
