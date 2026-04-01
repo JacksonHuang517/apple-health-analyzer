@@ -595,7 +595,8 @@ def run_cli():
     print(f"  {APP_NAME} v{VERSION}")
     print(f"{'='*50}\n")
 
-    export_dir = sys.argv[1] if len(sys.argv) > 1 else None
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    export_dir = args[0] if args else None
     if not export_dir:
         local = os.path.join(os.path.dirname(os.path.abspath(__file__)), "apple_health_export")
         if os.path.isdir(local):

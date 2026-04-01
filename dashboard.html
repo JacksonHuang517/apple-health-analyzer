@@ -532,17 +532,26 @@ function getDateRange() {
     ...fromObj(DATA.hrv),
   );
   allDates.sort();
-  const latest = allDates.length ? new Date(allDates[allDates.length - 1]) : new Date();
+  if (!allDates.length) return { start: '2020-01-01', end: '2099-12-31' };
 
-  let start;
-  switch (currentPeriod) {
-    case '1m': start = new Date(latest); start.setMonth(start.getMonth() - 1); break;
-    case '3m': start = new Date(latest); start.setMonth(start.getMonth() - 3); break;
-    case '6m': start = new Date(latest); start.setMonth(start.getMonth() - 6); break;
-    case '1y': start = new Date(latest); start.setFullYear(start.getFullYear() - 1); break;
-    default: start = allDates.length ? new Date(allDates[0]) : new Date('2020-01-01');
+  const latestStr = allDates[allDates.length - 1];
+  const [ly, lm, ld] = latestStr.split('-').map(Number);
+
+  function utcFmt(y, m, d) {
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return dt.toISOString().slice(0, 10);
   }
-  return { start: fmt(start), end: fmt(new Date(latest.getTime() + 86400000)) };
+
+  let startStr;
+  switch (currentPeriod) {
+    case '1m': startStr = utcFmt(ly, lm - 1, ld); break;
+    case '3m': startStr = utcFmt(ly, lm - 3, ld); break;
+    case '6m': startStr = utcFmt(ly, lm - 6, ld); break;
+    case '1y': startStr = utcFmt(ly - 1, lm, ld); break;
+    default: startStr = allDates[0];
+  }
+  const endStr = utcFmt(ly, lm, ld + 1);
+  return { start: startStr, end: endStr };
 }
 
 function fmt(d) { return d.toISOString().slice(0, 10); }
