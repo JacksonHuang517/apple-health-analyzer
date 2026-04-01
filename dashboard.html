@@ -106,6 +106,9 @@ body {
   border-radius: 8px;
   background: var(--segment-track);
   color: var(--text-dim);
+  line-height: 1.4;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   font-family: inherit;
   font-size: 13px;
@@ -136,7 +139,8 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  row-gap: 8px;
   padding: 10px 32px 14px;
   background: var(--bg);
   border-bottom: none;
@@ -151,6 +155,98 @@ body {
   font-weight: 500;
   margin-right: 4px;
 }
+.body-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+  margin: 0 0 8px;
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+}
+.body-filter-bar .cb-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 6px;
+  background: var(--segment-track);
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  user-select: none;
+}
+.body-filter-bar .cb-label:has(input:checked) {
+  background: rgba(10,132,255,0.12);
+  color: var(--accent);
+  font-weight: 600;
+}
+.body-filter-bar .cb-label input[type=checkbox] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 3px;
+  margin: 0;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.body-filter-bar .cb-label input[type=checkbox]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.body-filter-bar .cb-label input[type=checkbox]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3.5px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.sport-insights {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+}
+.sport-insights h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+.sport-insights .si-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--divider);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.sport-insights .si-item:last-child { border-bottom: none; }
+.sport-insights .si-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.sport-insights .si-dot.good { background: #30d158; }
+.sport-insights .si-dot.warn { background: #ff9f0a; }
+.sport-insights .si-dot.neutral { background: #8e8e93; }
+.sport-insights .si-label { font-weight: 600; color: var(--text); margin-right: 4px; }
+.sport-insights .si-desc { color: var(--text-dim); }
 
 .container { max-width: 1400px; margin: 0 auto; padding: 24px 24px 60px; }
 .tab-panel { display: none; }
@@ -353,6 +449,14 @@ body {
       <div class="chart-box"><h3 data-i="steps">每日步数</h3><canvas id="ovChart5"></canvas></div>
       <div class="chart-box"><h3 data-i="flame">每日活动热量</h3><canvas id="ovChart6"></canvas></div>
     </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="trend">每周运动量 vs 静息心率</h3><canvas id="ovChart7"></canvas></div>
+      <div class="chart-box"><h3 data-i="zap">每周运动量 vs VO2 Max</h3><canvas id="ovChart8"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="heart">每周运动量 vs HRV</h3><canvas id="ovChart9"></canvas></div>
+      <div class="chart-box"><h3 data-i="dumbbell">运动频率与身体恢复指标</h3><canvas id="ovChart10"></canvas></div>
+    </div>
   </div>
 
   <!-- 动态运动标签页由 JS 生成到这里 -->
@@ -371,6 +475,21 @@ body {
     <div class="chart-row">
       <div class="chart-box"><h3 data-i="steps">每日步数</h3><canvas id="bdChart5"></canvas></div>
       <div class="chart-box"><h3 data-i="flame">活动热量趋势</h3><canvas id="bdChart6"></canvas></div>
+    </div>
+    <div class="body-filter-bar" id="bodyFilterBar">
+      <div style="width:100%;margin-bottom:6px;">
+        <label data-i="search" style="font-weight:600;color:var(--text);font-size:14px;">跨运动关联分析</label>
+        <span style="color:var(--text-muted);font-size:12px;margin-left:6px;">勾选下方运动类型，查看其对身体指标（静息心率、VO2 Max、HRV、体重）的影响</span>
+      </div>
+      <span id="bodyFilterChecks"></span>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="trend">运动强度与静息心率变化趋势</h3><canvas id="bdChart7"></canvas></div>
+      <div class="chart-box"><h3 data-i="zap">累积运动量与 VO2 Max 变化</h3><canvas id="bdChart8"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="dumbbell">运动类型构成与体重变化</h3><canvas id="bdChart9"></canvas></div>
+      <div class="chart-box"><h3 data-i="activity">高强度训练后恢复指标</h3><canvas id="bdChart10"></canvas></div>
     </div>
   </div>
 </div>
@@ -421,6 +540,7 @@ function init() {
   document.getElementById('main').classList.remove('hidden');
 
   buildDynamicTabs();
+  updateCrossYear();
 
   document.querySelectorAll('.period-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -478,7 +598,8 @@ function buildDynamicTabs() {
           <div class="chart-box"><h3 data-i="heart">静息心率 &amp; HRV</h3><canvas id="chart6"></canvas></div>
         </div>
         <div class="section"><h2 data-i="search">综合分析洞察</h2><div class="insight-grid" id="insights"></div></div>
-        <div class="section"><h2 data-i="cal">骑行日状态评分</h2><p style="color:var(--text-dim);font-size:12px;margin-bottom:12px">综合评分：均速、心率经济性、运动量、恢复指标</p><div id="dayScores"></div></div>`;
+        <div class="section"><h2 data-i="cal">骑行日状态评分</h2><p style="color:var(--text-dim);font-size:12px;margin-bottom:12px">综合评分：均速、心率经济性、运动量、恢复指标</p><div id="dayScores"></div></div>
+        <div class="sport-insights" id="cyclingInsights"></div>`;
     } else if (key === 'strength') {
       panel.innerHTML = `
         <div class="chart-row">
@@ -491,7 +612,8 @@ function buildDynamicTabs() {
         </div>
         <div class="chart-row">
           <div class="chart-box"><h3 data-i="trend">当周力训次数 vs 骑行均速</h3><canvas id="stChart5"></canvas></div>
-        </div>`;
+        </div>
+        <div class="sport-insights" id="strengthInsights"></div>`;
     } else if (key === 'running') {
       panel.innerHTML = `
         <div class="chart-row">
@@ -505,7 +627,8 @@ function buildDynamicTabs() {
         <div class="chart-row">
           <div class="chart-box"><h3 data-i="flame">跑步热量趋势</h3><canvas id="runChart5"></canvas></div>
           <div class="chart-box"><h3 data-i="clock">单次时长趋势</h3><canvas id="runChart6"></canvas></div>
-        </div>`;
+        </div>
+        <div class="sport-insights" id="runningInsights"></div>`;
     } else {
       const pfx = key.replace(/[^a-z0-9]/g,'');
       panel.innerHTML = `
@@ -516,7 +639,8 @@ function buildDynamicTabs() {
         <div class="chart-row">
           <div class="chart-box"><h3 data-i="bar">${wt.label} — 每周频率</h3><canvas id="${pfx}C3"></canvas></div>
           <div class="chart-box"><h3 data-i="flame">${wt.label} — 活动热量</h3><canvas id="${pfx}C4"></canvas></div>
-        </div>`;
+        </div>
+        <div class="sport-insights" id="${key}Insights"></div>`;
     }
 
     panel.querySelectorAll('[data-i]').forEach(el => {
@@ -550,6 +674,7 @@ function showTabPanel(tabId) {
 
 /** 时间范围或数据刷新：销毁图表并重绘所有已访问过的标签页 */
 function onRangeChange() {
+  updateCrossYear();
   destroyCharts();
   tabsEverShown.forEach(tab => renderTabContent(tab));
 }
@@ -596,6 +721,15 @@ function getDateRange() {
 }
 
 function fmt(d) { return d.toISOString().slice(0, 10); }
+
+let _crossYear = false;
+function updateCrossYear() {
+  const range = getDateRange();
+  _crossYear = range.start.slice(0, 4) !== range.end.slice(0, 4);
+}
+function fmtLabel(dateStr) {
+  return _crossYear ? dateStr.slice(2) : dateStr.slice(5);
+}
 
 function filterByRange(arr) {
   const { start, end } = getDateRange();
@@ -692,12 +826,15 @@ function renderTabContent(tabId) {
   } else if (tabId === 'cycling') {
     destroyKeys(['c']);
     renderCyclingTab(range, cycling, strength);
+    renderSportBodyInsights('cycling', range);
   } else if (tabId === 'strength') {
     destroyKeys(['st']);
     renderStrengthTab(range, cycling, strength);
+    renderSportBodyInsights('strength', range);
   } else if (tabId === 'running') {
     destroyKeys(['run']);
     renderRunningTab(range);
+    renderSportBodyInsights('running', range);
   } else if (tabId === 'body') {
     destroyKeys(['bd']);
     renderBodyTab(range);
@@ -705,6 +842,7 @@ function renderTabContent(tabId) {
     const pfx = tabId.replace(/[^a-z0-9]/g,'');
     destroyKeys([pfx]);
     renderGenericSportTab(tabId, pfx, range);
+    renderSportBodyInsights(tabId, range);
   }
 }
 
@@ -799,7 +937,7 @@ function renderOverview(range, cycling, strength, other) {
     weekDur[k] += w.duration_min || 0;
   });
   const wKeys = Object.keys(weekDur).sort();
-  const wkLabels = wKeys.length ? wKeys.map(k => k.slice(5)) : ['—'];
+  const wkLabels = wKeys.length ? wKeys.map(k => fmtLabel(k)) : ['—'];
   const wkData = wKeys.length ? wKeys.map(k => +weekDur[k].toFixed(0)) : [0];
   charts.ov2 = new Chart(document.getElementById('ovChart2'), {
     type: 'bar',
@@ -828,7 +966,7 @@ function renderOverview(range, cycling, strength, other) {
   charts.ov3 = new Chart(document.getElementById('ovChart3'), {
     type: 'line',
     data: {
-      labels: vo2Ent.map(([d]) => d.slice(5)),
+      labels: vo2Ent.map(([d]) => fmtLabel(d)),
       datasets: [
         { label: 'VO2 Max', data: vo2Vals, borderColor: CC.green, backgroundColor: 'rgba(52,211,153,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
         ...(vo2Vals.length >= 2 ? [{ label: '线性趋势', data: vo2Reg.line, borderColor: 'rgba(251,191,36,0.7)', borderDash: [6, 3], pointRadius: 0, fill: false, borderWidth: 2 }] : []),
@@ -845,7 +983,7 @@ function renderOverview(range, cycling, strength, other) {
   charts.ov4 = new Chart(document.getElementById('ovChart4'), {
     type: 'line',
     data: {
-      labels: massEnt.map(([d]) => d.slice(5)),
+      labels: massEnt.map(([d]) => fmtLabel(d)),
       datasets: [{
         label: '体重(kg)',
         data: massEnt.map(([, v]) => v),
@@ -863,7 +1001,7 @@ function renderOverview(range, cycling, strength, other) {
   charts.ov5 = new Chart(document.getElementById('ovChart5'), {
     type: 'line',
     data: {
-      labels: stepsEnt.map(([d]) => d.slice(5)),
+      labels: stepsEnt.map(([d]) => fmtLabel(d)),
       datasets: [{
         label: '步数',
         data: stepsEnt.map(([, v]) => v),
@@ -886,7 +1024,7 @@ function renderOverview(range, cycling, strength, other) {
   charts.ov6 = new Chart(document.getElementById('ovChart6'), {
     type: 'line',
     data: {
-      labels: aeEnt.map(([d]) => d.slice(5)),
+      labels: aeEnt.map(([d]) => fmtLabel(d)),
       datasets: [{
         label: '活动热量(kcal)',
         data: aeEnt.map(([, v]) => v),
@@ -904,6 +1042,102 @@ function renderOverview(range, cycling, strength, other) {
       },
     }),
   });
+
+  // ── 跨运动关联分析 ──
+  const allFiltered2 = DATA.workouts ? Object.values(DATA.workouts).flatMap(a => filterByRange(a)) : [...cycling, ...strength, ...other];
+  const weekVol = {};
+  allFiltered2.forEach(w => {
+    const wk = weekKeyFromDate(w.date);
+    if (!weekVol[wk]) weekVol[wk] = { dur: 0, cnt: 0 };
+    weekVol[wk].dur += (w.duration_min || 0);
+    weekVol[wk].cnt++;
+  });
+
+  const restHr = filterDateMap(DATA.resting_hr);
+  const weekRestHr = {};
+  restHr.forEach(([d, v]) => {
+    const wk = weekKeyFromDate(d);
+    if (!weekRestHr[wk]) weekRestHr[wk] = [];
+    weekRestHr[wk].push(v);
+  });
+  const weekRestHrAvg = {};
+  Object.entries(weekRestHr).forEach(([wk, vs]) => { weekRestHrAvg[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const commonWeeks7 = Object.keys(weekVol).filter(w => weekRestHrAvg[w] != null).sort();
+  if (commonWeeks7.length > 2) {
+    charts.ov7 = new Chart(document.getElementById('ovChart7'), {
+      type:'line', data:{ labels:commonWeeks7.map(k=>fmtLabel(k)), datasets:[
+        {label:'周运动量(min)',data:commonWeeks7.map(k=>Math.round(weekVol[k].dur)),borderColor:CC.accent,backgroundColor:'rgba(56,189,248,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y'},
+        {label:'静息心率(bpm)',data:commonWeeks7.map(k=>weekRestHrAvg[k]),borderColor:CC.red,borderDash:[5,3],pointRadius:3,yAxisID:'y1'},
+      ]}, options:baseOpts({scales:{y:{title:{display:true,text:'运动量(min)'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'静息心率(bpm)'}}}})
+    });
+  }
+
+  const vo2Entries = filterDateMap(DATA.vo2max);
+  const weekVo2 = {};
+  vo2Entries.forEach(([d, v]) => {
+    const wk = weekKeyFromDate(d);
+    if (!weekVo2[wk]) weekVo2[wk] = [];
+    weekVo2[wk].push(v);
+  });
+  const weekVo2Avg = {};
+  Object.entries(weekVo2).forEach(([wk, vs]) => { weekVo2Avg[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const commonWeeks8 = Object.keys(weekVol).filter(w => weekVo2Avg[w] != null).sort();
+  if (commonWeeks8.length > 2) {
+    charts.ov8 = new Chart(document.getElementById('ovChart8'), {
+      type:'line', data:{ labels:commonWeeks8.map(k=>fmtLabel(k)), datasets:[
+        {label:'周运动量(min)',data:commonWeeks8.map(k=>Math.round(weekVol[k].dur)),borderColor:CC.accent,backgroundColor:'rgba(56,189,248,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y'},
+        {label:'VO2 Max',data:commonWeeks8.map(k=>weekVo2Avg[k]),borderColor:CC.green,tension:0.3,pointRadius:3,yAxisID:'y1'},
+      ]}, options:baseOpts({scales:{y:{title:{display:true,text:'运动量(min)'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'VO2 Max'}}}})
+    });
+  }
+
+  const hrvEntries = filterDateMap(DATA.hrv);
+  const weekHrv = {};
+  hrvEntries.forEach(([d, v]) => {
+    const wk = weekKeyFromDate(d);
+    if (!weekHrv[wk]) weekHrv[wk] = [];
+    weekHrv[wk].push(v);
+  });
+  const weekHrvAvg = {};
+  Object.entries(weekHrv).forEach(([wk, vs]) => { weekHrvAvg[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const commonWeeks9 = Object.keys(weekVol).filter(w => weekHrvAvg[w] != null).sort();
+  if (commonWeeks9.length > 2) {
+    charts.ov9 = new Chart(document.getElementById('ovChart9'), {
+      type:'line', data:{ labels:commonWeeks9.map(k=>fmtLabel(k)), datasets:[
+        {label:'周运动量(min)',data:commonWeeks9.map(k=>Math.round(weekVol[k].dur)),borderColor:CC.accent,backgroundColor:'rgba(56,189,248,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y'},
+        {label:'HRV(ms)',data:commonWeeks9.map(k=>weekHrvAvg[k]),borderColor:'#a855f7',tension:0.3,pointRadius:3,yAxisID:'y1'},
+      ]}, options:baseOpts({scales:{y:{title:{display:true,text:'运动量(min)'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'HRV(ms)'}}}})
+    });
+  }
+
+  const weekCounts = Object.keys(weekVol).sort();
+  if (weekCounts.length > 2 && (commonWeeks7.length > 2 || commonWeeks8.length > 2)) {
+    const recoveryData = weekCounts.map(wk => {
+      const rhr = weekRestHrAvg[wk];
+      const hrv = weekHrvAvg[wk];
+      const vol = weekVol[wk];
+      return { wk, cnt: vol.cnt, dur: Math.round(vol.dur), rhr, hrv };
+    }).filter(d => d.rhr != null || d.hrv != null);
+
+    if (recoveryData.length > 2) {
+      const datasets10 = [
+        {label:'运动次数',data:recoveryData.map(d=>d.cnt),borderColor:CC.accent,tension:0.3,pointRadius:3,yAxisID:'y'},
+      ];
+      if (recoveryData.some(d => d.rhr)) {
+        datasets10.push({label:'静息心率',data:recoveryData.map(d=>d.rhr),borderColor:CC.red,borderDash:[4,2],tension:0.3,pointRadius:2,yAxisID:'y1'});
+      }
+      if (recoveryData.some(d => d.hrv)) {
+        datasets10.push({label:'HRV',data:recoveryData.map(d=>d.hrv),borderColor:'#a855f7',borderDash:[6,3],tension:0.3,pointRadius:2,yAxisID:'y1'});
+      }
+      charts.ov10 = new Chart(document.getElementById('ovChart10'), {
+        type:'line', data:{ labels:recoveryData.map(d=>fmtLabel(d.wk)), datasets: datasets10 },
+        options:baseOpts({scales:{y:{title:{display:true,text:'运动次数'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'bpm / ms'}}}})
+      });
+    }
+  }
 }
 
 // ── 骑行（原逻辑） ──
@@ -965,7 +1199,7 @@ function renderCyclingTab(range, cycling, strength) {
     charts.c1 = new Chart(document.getElementById('chart1'), {
       type: 'line',
       data: {
-        labels: commute.map(w => w.date.slice(5)),
+        labels: commute.map(w => fmtLabel(w.date)),
         datasets: [
           { label:'计算均速', data:calcSpeeds, borderColor:CC.accent, backgroundColor:'rgba(56,189,248,0.08)', fill:true, tension:0.3, pointRadius:4 },
           { label:'GPX实时均速', data:gpxSpeeds, borderColor:CC.accent2, backgroundColor:'rgba(129,140,248,0.08)', fill:true, tension:0.3, pointRadius:4 },
@@ -983,7 +1217,7 @@ function renderCyclingTab(range, cycling, strength) {
     charts.c2 = new Chart(document.getElementById('chart2'), {
       type: 'line',
       data: {
-        labels: commHr2.map(w => w.date.slice(5)),
+        labels: commHr2.map(w => fmtLabel(w.date)),
         datasets: [
           { label:'平均心率', data:hrs, borderColor:CC.red, backgroundColor:'rgba(248,113,113,0.08)', fill:true, tension:0.3, pointRadius:4 },
           { label:'速度', data:commHr2.map(w=>w.gpx_avg_speed_kmh||w.avg_speed_kmh), borderColor:CC.accent, yAxisID:'y1', tension:0.3, pointRadius:4 },
@@ -1010,7 +1244,7 @@ function renderCyclingTab(range, cycling, strength) {
     weeks[key].count++;
   });
   const wKeys = Object.keys(weeks).sort();
-  const cyLabels = wKeys.length ? wKeys.map(k => k.slice(5)) : ['—'];
+  const cyLabels = wKeys.length ? wKeys.map(k => fmtLabel(k)) : ['—'];
   const cyDist = wKeys.length ? wKeys.map(k => +weeks[k].dist.toFixed(1)) : [0];
   const cyCnt = wKeys.length ? wKeys.map(k => weeks[k].count) : [0];
   charts.c3 = new Chart(document.getElementById('chart3'), {
@@ -1100,7 +1334,7 @@ function renderCyclingTab(range, cycling, strength) {
 
   charts.c6 = new Chart(document.getElementById('chart6'), {
     type: 'line',
-    data: { labels: allRecovDates.map(d=>d.slice(5)), datasets: datasets6 },
+    data: { labels: allRecovDates.map(d=>fmtLabel(d)), datasets: datasets6 },
     options: baseOpts({
       scales: {
         x: { ticks:{color:CC.text,font:{size:9},maxTicksLimit:20}, grid:{color:CC.grid} },
@@ -1124,7 +1358,7 @@ function renderStrengthTab(range, cycling, strength) {
     strWeek[k].dur += w.duration_min || 0;
   });
   const sk = Object.keys(strWeek).sort();
-  const skLab = sk.length ? sk.map(x => x.slice(5)) : ['—'];
+  const skLab = sk.length ? sk.map(x => fmtLabel(x)) : ['—'];
   const skCnt = sk.length ? sk.map(k => strWeek[k].count) : [0];
   const skDur = sk.length ? sk.map(k => +strWeek[k].dur.toFixed(0)) : [0];
 
@@ -1147,7 +1381,7 @@ function renderStrengthTab(range, cycling, strength) {
   });
 
   const strSorted = [...strength].sort((a, b) => a.date.localeCompare(b.date));
-  const strLab = strSorted.length ? strSorted.map(w => w.date.slice(5)) : ['—'];
+  const strLab = strSorted.length ? strSorted.map(w => fmtLabel(w.date)) : ['—'];
   charts.st2 = new Chart(document.getElementById('stChart2'), {
     type: 'line',
     data: {
@@ -1216,7 +1450,7 @@ function renderStrengthTab(range, cycling, strength) {
     if (!s || !s.speeds.length) return null;
     return s.speeds.reduce((a, b) => a + b, 0) / s.speeds.length;
   }) : [null];
-  const wk5Lab = allWeeks.length ? allWeeks.map(k => k.slice(5)) : ['—'];
+  const wk5Lab = allWeeks.length ? allWeeks.map(k => fmtLabel(k)) : ['—'];
 
   charts.st5 = new Chart(document.getElementById('stChart5'), {
     type: 'line',
@@ -1248,7 +1482,7 @@ function renderRunningTab(range) {
   if (paces.length) {
     const reg = linReg(paces.map(w => w.avg_pace_min_km));
     charts.run1 = new Chart(document.getElementById('runChart1'), {
-      type:'line', data:{ labels:paces.map(w=>w.date.slice(5)), datasets:[
+      type:'line', data:{ labels:paces.map(w=>fmtLabel(w.date)), datasets:[
         {label:'配速(min/km)',data:paces.map(w=>w.avg_pace_min_km),borderColor:CC.accent,backgroundColor:'rgba(56,189,248,0.15)',fill:true,tension:0.3,pointRadius:4},
         {label:'趋势线',data:reg.line,borderColor:CC.orange,borderDash:[6,3],pointRadius:0},
       ]}, options:baseOpts({plugins:{legend:{display:true,labels:{color:CC.text}}},scales:{y:{reverse:true,title:{display:true,text:'min/km',color:CC.text}}}})
@@ -1259,7 +1493,7 @@ function renderRunningTab(range) {
   const hrRuns = runs.filter(w => w.avg_hr);
   if (hrRuns.length) {
     charts.run2 = new Chart(document.getElementById('runChart2'), {
-      type:'line', data:{ labels:hrRuns.map(w=>w.date.slice(5)), datasets:[
+      type:'line', data:{ labels:hrRuns.map(w=>fmtLabel(w.date)), datasets:[
         {label:'平均心率',data:hrRuns.map(w=>w.avg_hr),borderColor:CC.red,backgroundColor:'rgba(255,59,48,0.1)',fill:true,tension:0.3,pointRadius:4},
         {label:'最大心率',data:hrRuns.map(w=>w.max_hr),borderColor:'rgba(255,59,48,0.4)',borderDash:[4,2],pointRadius:2},
       ]}, options:baseOpts()
@@ -1277,7 +1511,7 @@ function renderRunningTab(range) {
   const wks = Object.keys(weekRun).sort();
   if (wks.length) {
     charts.run3 = new Chart(document.getElementById('runChart3'), {
-      type:'bar', data:{ labels:wks.map(k=>k.slice(5)), datasets:[
+      type:'bar', data:{ labels:wks.map(k=>fmtLabel(k)), datasets:[
         {label:'周跑量(km)',data:wks.map(k=>+weekRun[k].dist.toFixed(1)),backgroundColor:'rgba(56,189,248,0.6)',yAxisID:'y'},
         {label:'次数',data:wks.map(k=>weekRun[k].cnt),type:'line',borderColor:CC.orange,pointRadius:3,yAxisID:'y1'},
       ]}, options:baseOpts({scales:{y:{title:{display:true,text:'km'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'次数'}}}})
@@ -1299,7 +1533,7 @@ function renderRunningTab(range) {
   const calRuns = runs.filter(w => w.active_cal > 0);
   if (calRuns.length) {
     charts.run5 = new Chart(document.getElementById('runChart5'), {
-      type:'bar', data:{ labels:calRuns.map(w=>w.date.slice(5)), datasets:[
+      type:'bar', data:{ labels:calRuns.map(w=>fmtLabel(w.date)), datasets:[
         {label:'活动热量(kcal)',data:calRuns.map(w=>Math.round(w.active_cal)),backgroundColor:'rgba(255,149,0,0.5)'},
       ]}, options:baseOpts()
     });
@@ -1307,7 +1541,7 @@ function renderRunningTab(range) {
 
   // 单次时长
   charts.run6 = new Chart(document.getElementById('runChart6'), {
-    type:'bar', data:{ labels:runs.map(w=>w.date.slice(5)), datasets:[
+    type:'bar', data:{ labels:runs.map(w=>fmtLabel(w.date)), datasets:[
       {label:'时长(分钟)',data:runs.map(w=>+w.duration_min.toFixed(1)),backgroundColor:'rgba(129,140,248,0.5)'},
     ]}, options:baseOpts()
   });
@@ -1320,7 +1554,7 @@ function renderGenericSportTab(key, pfx, range) {
 
   // 单次时长趋势
   charts[pfx+'C1'] = new Chart(document.getElementById(pfx+'C1'), {
-    type:'bar', data:{ labels:data.map(w=>w.date.slice(5)), datasets:[
+    type:'bar', data:{ labels:data.map(w=>fmtLabel(w.date)), datasets:[
       {label:'时长(分钟)',data:data.map(w=>+w.duration_min.toFixed(1)),backgroundColor:'rgba(56,189,248,0.5)'},
     ]}, options:baseOpts()
   });
@@ -1330,7 +1564,7 @@ function renderGenericSportTab(key, pfx, range) {
   if (hrData.length) {
     const reg = linReg(hrData.map(w=>w.avg_hr));
     charts[pfx+'C2'] = new Chart(document.getElementById(pfx+'C2'), {
-      type:'line', data:{ labels:hrData.map(w=>w.date.slice(5)), datasets:[
+      type:'line', data:{ labels:hrData.map(w=>fmtLabel(w.date)), datasets:[
         {label:'平均心率',data:hrData.map(w=>w.avg_hr),borderColor:CC.red,backgroundColor:'rgba(255,59,48,0.1)',fill:true,tension:0.3,pointRadius:3},
         {label:'趋势线',data:reg.line,borderColor:CC.orange,borderDash:[6,3],pointRadius:0},
       ]}, options:baseOpts()
@@ -1346,7 +1580,7 @@ function renderGenericSportTab(key, pfx, range) {
   const wks = Object.keys(weekFreq).sort();
   if (wks.length) {
     charts[pfx+'C3'] = new Chart(document.getElementById(pfx+'C3'), {
-      type:'bar', data:{ labels:wks.map(k=>k.slice(5)), datasets:[
+      type:'bar', data:{ labels:wks.map(k=>fmtLabel(k)), datasets:[
         {label:'每周次数',data:wks.map(k=>weekFreq[k]),backgroundColor:'rgba(52,211,153,0.5)'},
       ]}, options:baseOpts()
     });
@@ -1356,7 +1590,7 @@ function renderGenericSportTab(key, pfx, range) {
   const calData = data.filter(w => w.active_cal > 0);
   if (calData.length) {
     charts[pfx+'C4'] = new Chart(document.getElementById(pfx+'C4'), {
-      type:'line', data:{ labels:calData.map(w=>w.date.slice(5)), datasets:[
+      type:'line', data:{ labels:calData.map(w=>fmtLabel(w.date)), datasets:[
         {label:'活动热量(kcal)',data:calData.map(w=>Math.round(w.active_cal)),borderColor:CC.orange,backgroundColor:'rgba(251,146,60,0.15)',fill:true,tension:0.3,pointRadius:3},
       ]}, options:baseOpts()
     });
@@ -1367,7 +1601,7 @@ function renderBodyTab(range) {
   const rhrFiltered = Object.entries(DATA.resting_hr).filter(([d]) => d >= range.start && d <= range.end).sort((a,b) => a[0].localeCompare(b[0]));
   const hrvFiltered = Object.entries(DATA.hrv).filter(([d]) => d >= range.start && d <= range.end).sort((a,b) => a[0].localeCompare(b[0]));
   const allRecovDates = [...new Set([...rhrFiltered.map(([d])=>d), ...hrvFiltered.map(([d])=>d)])].sort();
-  const recovLab = allRecovDates.length ? allRecovDates.map(d => d.slice(5)) : ['—'];
+  const recovLab = allRecovDates.length ? allRecovDates.map(d => fmtLabel(d)) : ['—'];
   const rhrMap = Object.fromEntries(rhrFiltered);
   const hrvMap = Object.fromEntries(hrvFiltered);
   const dsBd1 = [
@@ -1394,7 +1628,7 @@ function renderBodyTab(range) {
   charts.bd2 = new Chart(document.getElementById('bdChart2'), {
     type: 'line',
     data: {
-      labels: vo2Ent.map(([d]) => d.slice(5)),
+      labels: vo2Ent.map(([d]) => fmtLabel(d)),
       datasets: [
         { label: 'VO2 Max', data: vo2Vals, borderColor: CC.green, backgroundColor: 'rgba(52,211,153,0.08)', fill: true, tension: 0.3, pointRadius: 3 },
         ...(vo2Vals.length >= 2 ? [{ label: '趋势线', data: vo2Reg.line, borderColor: 'rgba(251,191,36,0.75)', borderDash: [6, 3], pointRadius: 0, fill: false, borderWidth: 2 }] : []),
@@ -1407,7 +1641,7 @@ function renderBodyTab(range) {
   charts.bd3 = new Chart(document.getElementById('bdChart3'), {
     type: 'line',
     data: {
-      labels: massEnt.map(([d]) => d.slice(5)),
+      labels: massEnt.map(([d]) => fmtLabel(d)),
       datasets: [{ label: '体重(kg)', data: massEnt.map(([, v]) => v), borderColor: CC.pink, backgroundColor: 'rgba(244,114,182,0.08)', fill: true, tension: 0.35, pointRadius: 3 }],
     },
     options: baseOpts({ scales: { y: { title: { display: true, text: 'kg', color: CC.text } } } }),
@@ -1417,7 +1651,7 @@ function renderBodyTab(range) {
   charts.bd4 = new Chart(document.getElementById('bdChart4'), {
     type: 'line',
     data: {
-      labels: walkEnt.map(([d]) => d.slice(5)),
+      labels: walkEnt.map(([d]) => fmtLabel(d)),
       datasets: [{ label: '步行平均心率', data: walkEnt.map(([, v]) => v), borderColor: CC.accent2, backgroundColor: 'rgba(129,140,248,0.08)', fill: true, tension: 0.3, pointRadius: 2 }],
     },
     options: baseOpts({ scales: { y: { title: { display: true, text: 'bpm', color: CC.text } } } }),
@@ -1427,7 +1661,7 @@ function renderBodyTab(range) {
   charts.bd5 = new Chart(document.getElementById('bdChart5'), {
     type: 'bar',
     data: {
-      labels: stepsEnt.map(([d]) => d.slice(5)),
+      labels: stepsEnt.map(([d]) => fmtLabel(d)),
       datasets: [{ label: '步数', data: stepsEnt.map(([, v]) => v), backgroundColor: 'rgba(129,140,248,0.45)', borderColor: CC.accent2, borderWidth: 1, borderRadius: 3 }],
     },
     options: baseOpts({
@@ -1442,7 +1676,7 @@ function renderBodyTab(range) {
   charts.bd6 = new Chart(document.getElementById('bdChart6'), {
     type: 'line',
     data: {
-      labels: aeEnt.map(([d]) => d.slice(5)),
+      labels: aeEnt.map(([d]) => fmtLabel(d)),
       datasets: [{ label: '活动热量(kcal)', data: aeEnt.map(([, v]) => v), borderColor: CC.orange, backgroundColor: 'rgba(251,146,60,0.1)', fill: true, tension: 0.2, pointRadius: 0 }],
     },
     options: baseOpts({
@@ -1452,6 +1686,275 @@ function renderBodyTab(range) {
       },
     }),
   });
+
+  buildBodyFilterChecks();
+  renderBodyCorrelation();
+}
+
+let _bodyFilterKeys = null;
+function getBodySelectedKeys() {
+  if (_bodyFilterKeys) return _bodyFilterKeys;
+  const checks = document.querySelectorAll('#bodyFilterChecks input[type=checkbox]');
+  const sel = [];
+  checks.forEach(c => { if (c.checked) sel.push(c.value); });
+  return sel.length ? sel : null;
+}
+
+function buildBodyFilterChecks() {
+  const container = document.getElementById('bodyFilterChecks');
+  if (!container) return;
+  const types = DATA.workout_types || [];
+  if (!types.length) return;
+  container.innerHTML = '';
+  types.forEach(t => {
+    const lbl = document.createElement('label');
+    lbl.className = 'cb-label';
+    lbl.innerHTML = `<input type="checkbox" value="${t.key}" checked>${t.label}`;
+    container.appendChild(lbl);
+  });
+  container.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', () => renderBodyCorrelation());
+  });
+  const iconEl = document.querySelector('#bodyFilterBar > label[data-i]');
+  if (iconEl && !iconEl.querySelector('.ci')) {
+    iconEl.insertAdjacentHTML('afterbegin', _mkIcon(iconEl.dataset.i, 24));
+  }
+}
+
+function renderBodyCorrelation() {
+  ['bd7','bd8','bd9','bd10'].forEach(k => { if (charts[k]) { charts[k].destroy(); delete charts[k]; } });
+
+  const range = getDateRange();
+  const selKeys = getBodySelectedKeys();
+  const allWk = DATA.workouts
+    ? Object.entries(DATA.workouts).flatMap(([key, arr]) => {
+        if (selKeys && !selKeys.includes(key)) return [];
+        return filterByRange(arr);
+      })
+    : [];
+
+  const rhrFiltered = Object.entries(DATA.resting_hr).filter(([d]) => d >= range.start && d <= range.end).sort((a,b) => a[0].localeCompare(b[0]));
+  const hrvFiltered = Object.entries(DATA.hrv).filter(([d]) => d >= range.start && d <= range.end).sort((a,b) => a[0].localeCompare(b[0]));
+  const vo2Ent = filterDateMap(DATA.vo2max);
+  const massEnt = filterDateMap(DATA.body_mass);
+
+  // bdChart7: 运动强度与静息心率
+  const weekIntensity = {};
+  allWk.forEach(w => {
+    const wk = weekKeyFromDate(w.date);
+    if (!weekIntensity[wk]) weekIntensity[wk] = { totalCal: 0, totalMin: 0, cnt: 0 };
+    weekIntensity[wk].totalCal += (w.active_cal || 0);
+    weekIntensity[wk].totalMin += (w.duration_min || 0);
+    weekIntensity[wk].cnt++;
+  });
+  const weekRhr7 = {};
+  rhrFiltered.forEach(([d, v]) => { const wk = weekKeyFromDate(d); if (!weekRhr7[wk]) weekRhr7[wk]=[]; weekRhr7[wk].push(v); });
+  const weekRhrAvg7 = {};
+  Object.entries(weekRhr7).forEach(([wk, vs]) => { weekRhrAvg7[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const cw7 = Object.keys(weekIntensity).filter(w => weekRhrAvg7[w] != null).sort();
+  if (cw7.length > 2) {
+    const intensityPerMin = cw7.map(wk => weekIntensity[wk].totalMin > 0 ? +(weekIntensity[wk].totalCal / weekIntensity[wk].totalMin).toFixed(1) : 0);
+    charts.bd7 = new Chart(document.getElementById('bdChart7'), {
+      type:'line', data:{ labels:cw7.map(k=>fmtLabel(k)), datasets:[
+        {label:'运动强度(kcal/min)',data:intensityPerMin,borderColor:CC.orange,backgroundColor:'rgba(251,146,60,0.1)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y'},
+        {label:'静息心率(bpm)',data:cw7.map(k=>weekRhrAvg7[k]),borderColor:CC.red,borderDash:[5,3],tension:0.3,pointRadius:2,yAxisID:'y1'},
+      ]}, options:baseOpts({scales:{y:{title:{display:true,text:'kcal/min'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'bpm'}}}})
+    });
+  }
+
+  // bdChart8: 累积运动量与 VO2 Max
+  const sortedWeeksAll = Object.keys(weekIntensity).sort();
+  let cumMin = 0;
+  const cumData = sortedWeeksAll.map(wk => { cumMin += weekIntensity[wk].totalMin; return { wk, cumMin: Math.round(cumMin) }; });
+  const weekVo2bd = {};
+  vo2Ent.forEach(([d, v]) => { const wk = weekKeyFromDate(d); if (!weekVo2bd[wk]) weekVo2bd[wk]=[]; weekVo2bd[wk].push(v); });
+  const weekVo2AvgBd = {};
+  Object.entries(weekVo2bd).forEach(([wk, vs]) => { weekVo2AvgBd[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const cw8 = cumData.filter(d => weekVo2AvgBd[d.wk] != null);
+  if (cw8.length > 2) {
+    charts.bd8 = new Chart(document.getElementById('bdChart8'), {
+      type:'line', data:{ labels:cw8.map(d=>fmtLabel(d.wk)), datasets:[
+        {label:'累积运动量(min)',data:cw8.map(d=>d.cumMin),borderColor:CC.accent,backgroundColor:'rgba(56,189,248,0.1)',fill:true,tension:0.3,pointRadius:2,yAxisID:'y'},
+        {label:'VO2 Max',data:cw8.map(d=>weekVo2AvgBd[d.wk]),borderColor:CC.green,tension:0.3,pointRadius:3,yAxisID:'y1'},
+      ]}, options:baseOpts({scales:{y:{title:{display:true,text:'累积(min)'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'mL/kg·min'}}}})
+    });
+  }
+
+  // bdChart9: 运动类型构成与体重变化
+  const weekTypeMin = {};
+  const typeKeys = new Set();
+  allWk.forEach(w => {
+    const wk = weekKeyFromDate(w.date);
+    const key = w.key || 'other';
+    typeKeys.add(key);
+    if (!weekTypeMin[wk]) weekTypeMin[wk] = {};
+    weekTypeMin[wk][key] = (weekTypeMin[wk][key] || 0) + (w.duration_min || 0);
+  });
+  const weekMassBd = {};
+  massEnt.forEach(([d, v]) => { const wk = weekKeyFromDate(d); if (!weekMassBd[wk]) weekMassBd[wk]=[]; weekMassBd[wk].push(v); });
+  const weekMassAvg = {};
+  Object.entries(weekMassBd).forEach(([wk, vs]) => { weekMassAvg[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const cw9 = Object.keys(weekTypeMin).filter(wk => weekMassAvg[wk] != null).sort();
+  if (cw9.length > 2) {
+    const typeArr = [...typeKeys];
+    const colorPalBd9 = [CC.accent, CC.orange, CC.green, CC.pink, '#a855f7', '#fbbf24', '#6366f1', '#14b8a6'];
+    const stackDs = typeArr.map((tk, i) => ({
+      label: (DATA.workout_types||[]).find(t=>t.key===tk)?.label || tk,
+      data: cw9.map(wk => Math.round(weekTypeMin[wk][tk] || 0)),
+      backgroundColor: colorPalBd9[i % colorPalBd9.length] + '99',
+      stack: 'vol', yAxisID:'y', borderRadius:2
+    }));
+    stackDs.push({
+      label:'体重(kg)',data:cw9.map(wk=>weekMassAvg[wk]),borderColor:CC.pink,type:'line',tension:0.3,pointRadius:3,fill:false,yAxisID:'y1'
+    });
+    charts.bd9 = new Chart(document.getElementById('bdChart9'), {
+      type:'bar', data:{ labels:cw9.map(k=>fmtLabel(k)), datasets:stackDs },
+      options:baseOpts({scales:{
+        x:{stacked:true},
+        y:{stacked:true,title:{display:true,text:'运动时长(min)'}},
+        y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'kg'}}
+      }})
+    });
+  }
+
+  // bdChart10: 高强度训练后恢复指标
+  const dailyVol = {};
+  allWk.forEach(w => { if (!dailyVol[w.date]) dailyVol[w.date] = { cal:0, min:0 }; dailyVol[w.date].cal += (w.active_cal||0); dailyVol[w.date].min += (w.duration_min||0); });
+  const sortedDays = Object.keys(dailyVol).sort();
+  const heavyDays = sortedDays.filter(d => dailyVol[d].cal > 0).sort((a,b) => dailyVol[b].cal - dailyVol[a].cal).slice(0, Math.ceil(sortedDays.length * 0.3));
+
+  if (heavyDays.length >= 3) {
+    const nextDayRhr = {};
+    const rhrAllMap = Object.fromEntries(rhrFiltered);
+    const hrvAllMap = Object.fromEntries(hrvFiltered);
+    heavyDays.forEach(d => {
+      const parts = d.split('-').map(Number);
+      const nextD = new Date(Date.UTC(parts[0], parts[1]-1, parts[2]+1)).toISOString().slice(0,10);
+      const rhrNext = rhrAllMap[nextD];
+      const hrvNext = hrvAllMap[nextD];
+      if (rhrNext || hrvNext) nextDayRhr[d] = { rhr: rhrNext, hrv: hrvNext, cal: dailyVol[d].cal };
+    });
+    const recoverEntries = Object.entries(nextDayRhr).sort((a,b)=>a[0].localeCompare(b[0]));
+    if (recoverEntries.length >= 3) {
+      const ds10 = [{
+        label:'训练热量(kcal)',data:recoverEntries.map(([,v])=>Math.round(v.cal)),
+        borderColor:CC.orange,backgroundColor:'rgba(251,146,60,0.2)',fill:true,tension:0.3,pointRadius:3,yAxisID:'y'
+      }];
+      if (recoverEntries.some(([,v])=>v.rhr)) {
+        ds10.push({label:'次日静息心率',data:recoverEntries.map(([,v])=>v.rhr??null),borderColor:CC.red,borderDash:[4,2],tension:0.3,pointRadius:2,spanGaps:true,yAxisID:'y1'});
+      }
+      if (recoverEntries.some(([,v])=>v.hrv)) {
+        ds10.push({label:'次日HRV',data:recoverEntries.map(([,v])=>v.hrv??null),borderColor:'#a855f7',borderDash:[6,3],tension:0.3,pointRadius:2,spanGaps:true,yAxisID:'y1'});
+      }
+      charts.bd10 = new Chart(document.getElementById('bdChart10'), {
+        type:'line', data:{ labels:recoverEntries.map(([d])=>fmtLabel(d)), datasets:ds10 },
+        options:baseOpts({scales:{y:{title:{display:true,text:'kcal'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'bpm / ms'}}}})
+      });
+    }
+  }
+}
+
+function renderSportBodyInsights(sportKey, range) {
+  const container = document.getElementById(sportKey + 'Insights');
+  if (!container) return;
+  const wkData = filterByRange(getWorkouts(sportKey)).sort((a,b) => a.date.localeCompare(b.date));
+  if (wkData.length < 3) { container.innerHTML = ''; return; }
+
+  const label = (DATA.workout_types||[]).find(t=>t.key===sportKey)?.label || sportKey;
+  const insights = [];
+
+  const weekVol = {};
+  wkData.forEach(w => {
+    const wk = weekKeyFromDate(w.date);
+    if (!weekVol[wk]) weekVol[wk] = { min: 0, cnt: 0, cal: 0 };
+    weekVol[wk].min += (w.duration_min || 0);
+    weekVol[wk].cnt++;
+    weekVol[wk].cal += (w.active_cal || 0);
+  });
+  const weeks = Object.keys(weekVol).sort();
+
+  const rhr = Object.entries(DATA.resting_hr).filter(([d]) => d >= range.start && d <= range.end);
+  const weekRhr = {};
+  rhr.forEach(([d, v]) => { const wk = weekKeyFromDate(d); if (!weekRhr[wk]) weekRhr[wk]=[]; weekRhr[wk].push(v); });
+  const weekRhrAvg = {};
+  Object.entries(weekRhr).forEach(([wk, vs]) => { weekRhrAvg[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const matchedRhr = weeks.filter(wk => weekRhrAvg[wk] != null);
+  if (matchedRhr.length >= 3) {
+    const volArr = matchedRhr.map(wk => weekVol[wk].min);
+    const rhrArr = matchedRhr.map(wk => weekRhrAvg[wk]);
+    const corrRhr = pearsonCorr(volArr, rhrArr);
+    const rhrFirst3 = rhrArr.slice(0, 3).reduce((a,b)=>a+b,0)/3;
+    const rhrLast3 = rhrArr.slice(-3).reduce((a,b)=>a+b,0)/3;
+    const rhrDelta = rhrLast3 - rhrFirst3;
+    const cls = rhrDelta < -1 ? 'good' : rhrDelta > 1 ? 'warn' : 'neutral';
+    insights.push({ cls, label: `${label}与静息心率`, desc: `在${label}活跃的周内，静息心率${rhrDelta<0?'下降':'上升'}了${Math.abs(rhrDelta).toFixed(1)}bpm（相关系数 r=${corrRhr.toFixed(2)}）。${rhrDelta<-1?'心肺适应性在改善。':''}` });
+  }
+
+  const vo2 = filterDateMap(DATA.vo2max);
+  const weekVo2 = {};
+  vo2.forEach(([d, v]) => { const wk = weekKeyFromDate(d); if (!weekVo2[wk]) weekVo2[wk]=[]; weekVo2[wk].push(v); });
+  const weekVo2Avg = {};
+  Object.entries(weekVo2).forEach(([wk, vs]) => { weekVo2Avg[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const matchedVo2 = weeks.filter(wk => weekVo2Avg[wk] != null);
+  if (matchedVo2.length >= 3) {
+    const volArr = matchedVo2.map(wk => weekVol[wk].min);
+    const vo2Arr = matchedVo2.map(wk => weekVo2Avg[wk]);
+    const corrVo2 = pearsonCorr(volArr, vo2Arr);
+    const vo2First = vo2Arr.slice(0, 3).reduce((a,b)=>a+b,0)/3;
+    const vo2Last = vo2Arr.slice(-3).reduce((a,b)=>a+b,0)/3;
+    const vo2Delta = vo2Last - vo2First;
+    const cls = vo2Delta > 0.5 ? 'good' : vo2Delta < -0.5 ? 'warn' : 'neutral';
+    insights.push({ cls, label: `${label}与VO2 Max`, desc: `期间 VO2 Max ${vo2Delta>0?'提升':'变化'}${Math.abs(vo2Delta).toFixed(1)} mL/kg·min（相关系数 r=${corrVo2.toFixed(2)}）。${vo2Delta>0.5?'有氧能力在提升！':''}` });
+  }
+
+  const hrv = Object.entries(DATA.hrv).filter(([d]) => d >= range.start && d <= range.end);
+  const weekHrv = {};
+  hrv.forEach(([d, v]) => { const wk = weekKeyFromDate(d); if (!weekHrv[wk]) weekHrv[wk]=[]; weekHrv[wk].push(v); });
+  const weekHrvAvg = {};
+  Object.entries(weekHrv).forEach(([wk, vs]) => { weekHrvAvg[wk] = +(vs.reduce((a,b)=>a+b,0)/vs.length).toFixed(1); });
+
+  const matchedHrv = weeks.filter(wk => weekHrvAvg[wk] != null);
+  if (matchedHrv.length >= 3) {
+    const volArr = matchedHrv.map(wk => weekVol[wk].min);
+    const hrvArr = matchedHrv.map(wk => weekHrvAvg[wk]);
+    const corrHrv = pearsonCorr(volArr, hrvArr);
+    const cls = corrHrv > 0.2 ? 'good' : corrHrv < -0.2 ? 'warn' : 'neutral';
+    insights.push({ cls, label: `${label}与HRV`, desc: `${label}运动量与HRV的相关系数为 ${corrHrv.toFixed(2)}。${corrHrv>0.2?'运动有助于提升自主神经系统恢复能力。':''}${corrHrv<-0.2?'过度训练可能影响恢复，建议关注训练量。':''}` });
+  }
+
+  if (wkData.length >= 5) {
+    const durArr = wkData.map(w => w.duration_min);
+    const durReg = linReg(durArr);
+    const avgDur = durArr.reduce((a,b)=>a+b,0) / durArr.length;
+    const cls = durReg.slope > 0.1 ? 'good' : durReg.slope < -0.1 ? 'warn' : 'neutral';
+    insights.push({ cls, label: `${label}训练趋势`, desc: `平均单次${avgDur.toFixed(0)}分钟，时长趋势斜率${durReg.slope>0?'+':''}${durReg.slope.toFixed(2)}min/次。${durReg.slope>0.1?'训练量在稳步增加。':''}${durReg.slope<-0.1?'运动时长有所减少。':''}` });
+  }
+
+  const hrData = wkData.filter(w => w.avg_hr);
+  if (hrData.length >= 5) {
+    const hrReg = linReg(hrData.map(w => w.avg_hr));
+    const cls = hrReg.slope < -0.05 ? 'good' : hrReg.slope > 0.1 ? 'warn' : 'neutral';
+    insights.push({ cls, label: `${label}运动心率`, desc: `运动心率趋势${hrReg.slope>0?'+':''}${hrReg.slope.toFixed(2)}bpm/次。${hrReg.slope<-0.05?'同等运动下心率降低，心肺效率在提升。':''}` });
+  }
+
+  if (!insights.length) { container.innerHTML = ''; return; }
+  container.innerHTML = `<h3>${_mkIcon('search',24)} ${label} · 身体指标关联洞察</h3>` +
+    insights.map(i => `<div class="si-item"><span class="si-dot ${i.cls}"></span><span><span class="si-label">${i.label}：</span><span class="si-desc">${i.desc}</span></span></div>`).join('');
+}
+
+function pearsonCorr(x, y) {
+  const n = x.length;
+  if (n < 3) return 0;
+  const mx = x.reduce((a,b)=>a+b,0)/n, my = y.reduce((a,b)=>a+b,0)/n;
+  let num = 0, dx2 = 0, dy2 = 0;
+  for (let i=0;i<n;i++) { const dx=x[i]-mx, dy=y[i]-my; num+=dx*dy; dx2+=dx*dx; dy2+=dy*dy; }
+  const denom = Math.sqrt(dx2*dy2);
+  return denom > 0 ? num/denom : 0;
 }
 
 function renderInsights(cycling, strength, commute, dailyArr, strSet, range) {
@@ -1562,7 +2065,7 @@ function renderDayScores(dailyArr, strSet, range) {
     if (d.score < 55) badges += '<span class="badge badge-poor">恢复不足</span>';
     if (d.hadStr) badges += '<span class="badge badge-str">力训</span>';
     return `<div class="day-row">
-      <div class="dt">${d.date.slice(5)}</div>
+      <div class="dt">${fmtLabel(d.date)}</div>
       <div>
         <div style="margin-bottom:3px;color:var(--text-dim)">${d.dist.toFixed(1)}km · ${d.avgSpd.toFixed(1)}km/h · HR:${d.avgHr?d.avgHr.toFixed(0):'N/A'} ${badges}</div>
         <div class="bar-wrap"><div class="bar-fill" style="width:${d.score}%;background:${barCol(d.score)}"></div></div>
