@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Build artifacts
+build/
+build_tmp/
+dist/
+*.spec.bak
+
+# Data files (contain personal health data)
+apple_health_export/
+导出.zip
+analysis_data.json
+report.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
