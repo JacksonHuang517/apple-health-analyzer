@@ -332,8 +332,7 @@ body {
 <div class="tab-bar">
   <label>视图：</label>
   <button type="button" class="tab-btn active" data-tab="overview">总览</button>
-  <button type="button" class="tab-btn" data-tab="cycling">骑行</button>
-  <button type="button" class="tab-btn" data-tab="strength">力量训练</button>
+  <span id="sportTabsContainer"></span>
   <button type="button" class="tab-btn" data-tab="body">身体趋势</button>
 </div>
 
@@ -356,49 +355,8 @@ body {
     </div>
   </div>
 
-  <!-- 骑行（原内容） -->
-  <div id="cycling" class="tab-panel">
-    <div class="stats-grid" id="statsGrid"></div>
-
-    <div class="chart-row">
-      <div class="chart-box"><h3 id="ch1Title" data-i="trend">通勤路线均速趋势</h3><canvas id="chart1"></canvas></div>
-      <div class="chart-box"><h3 data-i="heart">通勤路线心率趋势</h3><canvas id="chart2"></canvas></div>
-    </div>
-    <div class="chart-row">
-      <div class="chart-box"><h3 data-i="barBlue">每周骑行距离与频率</h3><canvas id="chart3"></canvas></div>
-      <div class="chart-box"><h3 data-i="zap">心率效率（速度/心率散点）</h3><canvas id="chart4"></canvas></div>
-    </div>
-    <div class="chart-row">
-      <div class="chart-box"><h3 data-i="dumbbell">力量训练 vs 骑行表现</h3><canvas id="chart5"></canvas></div>
-      <div class="chart-box"><h3 data-i="heart">静息心率 &amp; HRV</h3><canvas id="chart6"></canvas></div>
-    </div>
-
-    <div class="section">
-      <h2 data-i="search">综合分析洞察</h2>
-      <div class="insight-grid" id="insights"></div>
-    </div>
-
-    <div class="section">
-      <h2 data-i="cal">骑行日状态评分</h2>
-      <p style="color:var(--text-dim);font-size:12px;margin-bottom:12px">综合评分：均速、心率经济性、运动量、恢复指标</p>
-      <div id="dayScores"></div>
-    </div>
-  </div>
-
-  <!-- 力量训练 -->
-  <div id="strength" class="tab-panel">
-    <div class="chart-row">
-      <div class="chart-box"><h3 data-i="bar">每周力训次数与总时长</h3><canvas id="stChart1"></canvas></div>
-      <div class="chart-box"><h3 data-i="heart">力训平均心率趋势</h3><canvas id="stChart2"></canvas></div>
-    </div>
-    <div class="chart-row">
-      <div class="chart-box"><h3 data-i="clock">力训单次时长趋势</h3><canvas id="stChart3"></canvas></div>
-      <div class="chart-box"><h3 data-i="flameOrg">力训活动热量趋势</h3><canvas id="stChart4"></canvas></div>
-    </div>
-    <div class="chart-row">
-      <div class="chart-box"><h3 data-i="trend">当周力训次数 vs 骑行均速</h3><canvas id="stChart5"></canvas></div>
-    </div>
-  </div>
+  <!-- 动态运动标签页由 JS 生成到这里 -->
+  <div id="dynamicPanels"></div>
 
   <!-- 身体趋势 -->
   <div id="body" class="tab-panel">
@@ -437,39 +395,32 @@ let DATA = null;
 let charts = {};
 let currentPeriod = '3m';
 let currentTab = 'overview';
-/** @type {Set<string>} */
 let tabsEverShown = new Set();
+let TAB_KEYS = ['overview'];
 
-const TAB_KEYS = ['overview', 'cycling', 'strength', 'body'];
-
-// ── 数据加载 ──
 fetch('analysis_data.json')
   .then(r => r.json())
   .then(d => { DATA = d; normalizeData(); init(); })
   .catch(e => { document.getElementById('loading').textContent = '加载失败: ' + e.message; });
 
 function normalizeData() {
-  if (!DATA.cycling) DATA.cycling = [];
-  if (!DATA.strength) DATA.strength = [];
-  if (!DATA.other) DATA.other = [];
+  if (!DATA.workouts) DATA.workouts = {};
+  if (!DATA.workout_types) DATA.workout_types = [];
+  if (!DATA.cycling) DATA.cycling = DATA.workouts.cycling || [];
+  if (!DATA.strength) DATA.strength = DATA.workouts.strength || [];
+  if (!DATA.other) {
+    const skip = new Set(['cycling','strength']);
+    DATA.other = Object.entries(DATA.workouts).filter(([k]) => !skip.has(k)).flatMap(([,v]) => v);
+  }
   if (!DATA.route_clusters) DATA.route_clusters = [];
-  if (!DATA.resting_hr) DATA.resting_hr = {};
-  if (!DATA.hrv) DATA.hrv = {};
-  if (!DATA.vo2max) DATA.vo2max = {};
-  if (!DATA.body_mass) DATA.body_mass = {};
-  if (!DATA.steps) DATA.steps = {};
-  if (!DATA.active_energy) DATA.active_energy = {};
-  if (!DATA.walking_hr) DATA.walking_hr = {};
-  if (!DATA.hr_recovery) DATA.hr_recovery = {};
-  if (!DATA.spo2) DATA.spo2 = {};
-  if (!DATA.protein) DATA.protein = {};
-  if (!DATA.dietary_energy) DATA.dietary_energy = {};
-  if (!DATA.exercise_time) DATA.exercise_time = {};
+  ['resting_hr','hrv','vo2max','body_mass','steps','active_energy','walking_hr','hr_recovery','spo2','protein','dietary_energy','exercise_time'].forEach(k => { if (!DATA[k]) DATA[k] = {}; });
 }
 
 function init() {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('main').classList.remove('hidden');
+
+  buildDynamicTabs();
 
   document.querySelectorAll('.period-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -487,6 +438,94 @@ function init() {
   tabsEverShown = new Set(['overview']);
   showTabPanel('overview');
   onRangeChange();
+}
+
+function buildDynamicTabs() {
+  const container = document.getElementById('sportTabsContainer');
+  const panelsContainer = document.getElementById('dynamicPanels');
+  TAB_KEYS = ['overview'];
+
+  (DATA.workout_types || []).forEach(wt => {
+    if (wt.count < 1) return;
+    const key = wt.key;
+    TAB_KEYS.push(key);
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tab-btn';
+    btn.dataset.tab = key;
+    btn.textContent = wt.label;
+    container.appendChild(btn);
+
+    const panel = document.createElement('div');
+    panel.id = key;
+    panel.className = 'tab-panel';
+    panelsContainer.appendChild(panel);
+
+    if (key === 'cycling') {
+      panel.innerHTML = `
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 id="ch1Title" data-i="trend">通勤路线均速趋势</h3><canvas id="chart1"></canvas></div>
+          <div class="chart-box"><h3 data-i="heart">通勤路线心率趋势</h3><canvas id="chart2"></canvas></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="barBlue">每周骑行距离与频率</h3><canvas id="chart3"></canvas></div>
+          <div class="chart-box"><h3 data-i="zap">心率效率（速度/心率散点）</h3><canvas id="chart4"></canvas></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="dumbbell">力量训练 vs 骑行表现</h3><canvas id="chart5"></canvas></div>
+          <div class="chart-box"><h3 data-i="heart">静息心率 &amp; HRV</h3><canvas id="chart6"></canvas></div>
+        </div>
+        <div class="section"><h2 data-i="search">综合分析洞察</h2><div class="insight-grid" id="insights"></div></div>
+        <div class="section"><h2 data-i="cal">骑行日状态评分</h2><p style="color:var(--text-dim);font-size:12px;margin-bottom:12px">综合评分：均速、心率经济性、运动量、恢复指标</p><div id="dayScores"></div></div>`;
+    } else if (key === 'strength') {
+      panel.innerHTML = `
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="bar">每周力训次数与总时长</h3><canvas id="stChart1"></canvas></div>
+          <div class="chart-box"><h3 data-i="heart">力训平均心率趋势</h3><canvas id="stChart2"></canvas></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="clock">力训单次时长趋势</h3><canvas id="stChart3"></canvas></div>
+          <div class="chart-box"><h3 data-i="flameOrg">力训活动热量趋势</h3><canvas id="stChart4"></canvas></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="trend">当周力训次数 vs 骑行均速</h3><canvas id="stChart5"></canvas></div>
+        </div>`;
+    } else if (key === 'running') {
+      panel.innerHTML = `
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="trend">配速趋势</h3><canvas id="runChart1"></canvas></div>
+          <div class="chart-box"><h3 data-i="heart">跑步心率趋势</h3><canvas id="runChart2"></canvas></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="barBlue">每周跑量与频率</h3><canvas id="runChart3"></canvas></div>
+          <div class="chart-box"><h3 data-i="zap">配速 vs 心率散点</h3><canvas id="runChart4"></canvas></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="flame">跑步热量趋势</h3><canvas id="runChart5"></canvas></div>
+          <div class="chart-box"><h3 data-i="clock">单次时长趋势</h3><canvas id="runChart6"></canvas></div>
+        </div>`;
+    } else {
+      const pfx = key.replace(/[^a-z0-9]/g,'');
+      panel.innerHTML = `
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="clock">${wt.label} — 单次时长趋势</h3><canvas id="${pfx}C1"></canvas></div>
+          <div class="chart-box"><h3 data-i="heart">${wt.label} — 心率趋势</h3><canvas id="${pfx}C2"></canvas></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-box"><h3 data-i="bar">${wt.label} — 每周频率</h3><canvas id="${pfx}C3"></canvas></div>
+          <div class="chart-box"><h3 data-i="flame">${wt.label} — 活动热量</h3><canvas id="${pfx}C4"></canvas></div>
+        </div>`;
+    }
+
+    panel.querySelectorAll('[data-i]').forEach(el => {
+      const sz = el.tagName === 'H1' ? 34 : el.tagName === 'H2' ? 28 : 24;
+      el.insertAdjacentHTML('afterbegin', _mkIcon(el.dataset.i, sz));
+    });
+  });
+
+  TAB_KEYS.push('body');
 }
 
 function switchTab(tabId) {
@@ -516,11 +555,13 @@ function onRangeChange() {
 }
 
 function getDateRange() {
-  const allDates = [
-    ...DATA.cycling.map(w => w.date),
-    ...DATA.strength.map(w => w.date),
-    ...DATA.other.map(w => w.date),
-  ];
+  const allDates = [];
+  Object.values(DATA.workouts || {}).forEach(arr => arr.forEach(w => allDates.push(w.date)));
+  if (!allDates.length) {
+    DATA.cycling.forEach(w => allDates.push(w.date));
+    DATA.strength.forEach(w => allDates.push(w.date));
+    DATA.other.forEach(w => allDates.push(w.date));
+  }
   const fromObj = (o) => Object.keys(o || {});
   allDates.push(
     ...fromObj(DATA.resting_hr),
@@ -628,17 +669,22 @@ function destroyKeys(prefixes) {
   });
 }
 
-// ── 总览 ──
+function getWorkouts(key) {
+  return (DATA.workouts && DATA.workouts[key]) || (key === 'cycling' ? DATA.cycling : key === 'strength' ? DATA.strength : []);
+}
+
 function renderTabContent(tabId) {
   const range = getDateRange();
-  const cycling = filterByRange(DATA.cycling);
-  const strength = filterByRange(DATA.strength);
+  const cycling = filterByRange(getWorkouts('cycling'));
+  const strength = filterByRange(getWorkouts('strength'));
   const other = filterByRange(DATA.other);
 
+  const totalWorkouts = Object.values(DATA.workouts || {}).reduce((s, a) => s + a.length, 0) || (DATA.cycling.length + DATA.strength.length + DATA.other.length);
+  const wtLabels = (DATA.workout_types || []).slice(0, 3).map(wt => `${wt.count}次${wt.label}`).join(' · ');
   document.getElementById('periodInfo').textContent =
     `${range.start} ~ ${range.end.slice(0,10)} · ${cycling.length}次骑行 · ${strength.length}次力训`;
   document.getElementById('subtitle').textContent =
-    `基于 Apple Health 数据 · ${DATA.cycling.length} 次骑行 · ${DATA.strength.length} 次力训`;
+    `基于 Apple Health 数据 · ${totalWorkouts} 次运动` + (wtLabels ? ` · ${wtLabels}` : '');
 
   if (tabId === 'overview') {
     destroyKeys(['ov']);
@@ -649,18 +695,54 @@ function renderTabContent(tabId) {
   } else if (tabId === 'strength') {
     destroyKeys(['st']);
     renderStrengthTab(range, cycling, strength);
+  } else if (tabId === 'running') {
+    destroyKeys(['run']);
+    renderRunningTab(range);
   } else if (tabId === 'body') {
     destroyKeys(['bd']);
     renderBodyTab(range);
+  } else {
+    const pfx = tabId.replace(/[^a-z0-9]/g,'');
+    destroyKeys([pfx]);
+    renderGenericSportTab(tabId, pfx, range);
   }
 }
 
 function renderOverview(range, cycling, strength, other) {
-  const cDur = cycling.reduce((s, w) => s + (w.duration_min || 0), 0);
-  const sDur = strength.reduce((s, w) => s + (w.duration_min || 0), 0);
-  const oDur = other.reduce((s, w) => s + (w.duration_min || 0), 0);
-  const pieLabels = ['骑行', '力量训练', '其他运动'];
-  const pieData = [cDur, sDur, oDur];
+  const pieLabels = [];
+  const pieData = [];
+  const pieColors = [];
+  const pieBorderColors = [];
+  const colorPalette = [
+    ['rgba(56,189,248,0.75)', CC.accent],
+    ['rgba(251,146,60,0.75)', CC.orange],
+    ['rgba(129,140,248,0.75)', CC.accent2],
+    ['rgba(52,211,153,0.65)', CC.green],
+    ['rgba(251,113,133,0.65)', CC.red],
+    ['rgba(168,85,247,0.65)', '#a855f7'],
+    ['rgba(234,179,8,0.65)', '#eab308'],
+    ['rgba(99,102,241,0.65)', '#6366f1'],
+  ];
+  if (DATA.workout_types && DATA.workout_types.length) {
+    DATA.workout_types.forEach((wt, i) => {
+      const arr = filterByRange(getWorkouts(wt.key));
+      const dur = arr.reduce((s, w) => s + (w.duration_min || 0), 0);
+      if (dur > 0) {
+        pieLabels.push(wt.label);
+        pieData.push(dur);
+        const ci = i % colorPalette.length;
+        pieColors.push(colorPalette[ci][0]);
+        pieBorderColors.push(colorPalette[ci][1]);
+      }
+    });
+  } else {
+    const cDur = cycling.reduce((s, w) => s + (w.duration_min || 0), 0);
+    const sDur = strength.reduce((s, w) => s + (w.duration_min || 0), 0);
+    const oDur = other.reduce((s, w) => s + (w.duration_min || 0), 0);
+    [['骑行', cDur], ['力量训练', sDur], ['其他运动', oDur]].forEach(([l, v], i) => {
+      if (v > 0) { pieLabels.push(l); pieData.push(v); pieColors.push(colorPalette[i][0]); pieBorderColors.push(colorPalette[i][1]); }
+    });
+  }
   const hasPie = pieData.some(v => v > 0);
 
   if (!hasPie) {
@@ -683,12 +765,8 @@ function renderOverview(range, cycling, strength, other) {
         labels: pieLabels,
         datasets: [{
           data: pieData,
-          backgroundColor: [
-            'rgba(56,189,248,0.75)',
-            'rgba(251,146,60,0.75)',
-            'rgba(129,140,248,0.75)',
-          ],
-          borderColor: [CC.accent, CC.orange, CC.accent2],
+          backgroundColor: pieColors,
+          borderColor: pieBorderColors,
           borderWidth: 1,
         }],
       },
@@ -712,9 +790,10 @@ function renderOverview(range, cycling, strength, other) {
     });
   }
 
-  // 每周运动总时长（骑行+力训+其他）
+  // 每周运动总时长
+  const allFiltered = DATA.workouts ? Object.values(DATA.workouts).flatMap(a => filterByRange(a)) : [...cycling, ...strength, ...other];
   const weekDur = {};
-  [...cycling, ...strength, ...other].forEach(w => {
+  allFiltered.forEach(w => {
     const k = weekKeyFromDate(w.date);
     if (!weekDur[k]) weekDur[k] = 0;
     weekDur[k] += w.duration_min || 0;
@@ -1159,6 +1238,131 @@ function renderStrengthTab(range, cycling, strength) {
 }
 
 // ── 身体趋势 ──
+// ── 跑步 ──
+function renderRunningTab(range) {
+  const runs = filterByRange(getWorkouts('running')).filter(w => (w.distance_km || 0) > 0.05).sort((a,b) => a.date.localeCompare(b.date));
+  if (!runs.length) return;
+
+  // 配速趋势
+  const paces = runs.filter(w => w.avg_pace_min_km && w.avg_pace_min_km < 30);
+  if (paces.length) {
+    const reg = linReg(paces.map(w => w.avg_pace_min_km));
+    charts.run1 = new Chart(document.getElementById('runChart1'), {
+      type:'line', data:{ labels:paces.map(w=>w.date.slice(5)), datasets:[
+        {label:'配速(min/km)',data:paces.map(w=>w.avg_pace_min_km),borderColor:CC.accent,backgroundColor:'rgba(56,189,248,0.15)',fill:true,tension:0.3,pointRadius:4},
+        {label:'趋势线',data:reg.line,borderColor:CC.orange,borderDash:[6,3],pointRadius:0},
+      ]}, options:baseOpts({plugins:{legend:{display:true,labels:{color:CC.text}}},scales:{y:{reverse:true,title:{display:true,text:'min/km',color:CC.text}}}})
+    });
+  }
+
+  // 心率趋势
+  const hrRuns = runs.filter(w => w.avg_hr);
+  if (hrRuns.length) {
+    charts.run2 = new Chart(document.getElementById('runChart2'), {
+      type:'line', data:{ labels:hrRuns.map(w=>w.date.slice(5)), datasets:[
+        {label:'平均心率',data:hrRuns.map(w=>w.avg_hr),borderColor:CC.red,backgroundColor:'rgba(255,59,48,0.1)',fill:true,tension:0.3,pointRadius:4},
+        {label:'最大心率',data:hrRuns.map(w=>w.max_hr),borderColor:'rgba(255,59,48,0.4)',borderDash:[4,2],pointRadius:2},
+      ]}, options:baseOpts()
+    });
+  }
+
+  // 每周跑量与频率
+  const weekRun = {};
+  runs.forEach(w => {
+    const wk = weekKeyFromDate(w.date);
+    if (!weekRun[wk]) weekRun[wk] = {dist:0,cnt:0};
+    weekRun[wk].dist += (w.distance_km||0);
+    weekRun[wk].cnt++;
+  });
+  const wks = Object.keys(weekRun).sort();
+  if (wks.length) {
+    charts.run3 = new Chart(document.getElementById('runChart3'), {
+      type:'bar', data:{ labels:wks.map(k=>k.slice(5)), datasets:[
+        {label:'周跑量(km)',data:wks.map(k=>+weekRun[k].dist.toFixed(1)),backgroundColor:'rgba(56,189,248,0.6)',yAxisID:'y'},
+        {label:'次数',data:wks.map(k=>weekRun[k].cnt),type:'line',borderColor:CC.orange,pointRadius:3,yAxisID:'y1'},
+      ]}, options:baseOpts({scales:{y:{title:{display:true,text:'km'}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'次数'}}}})
+    });
+  }
+
+  // 配速 vs 心率
+  const prHr = runs.filter(w => w.avg_pace_min_km && w.avg_pace_min_km < 30 && w.avg_hr);
+  if (prHr.length > 1) {
+    charts.run4 = new Chart(document.getElementById('runChart4'), {
+      type:'scatter', data:{ datasets:[{
+        label:'配速 vs 心率', data:prHr.map(w=>({x:w.avg_pace_min_km,y:w.avg_hr})),
+        backgroundColor:'rgba(56,189,248,0.6)', pointRadius:6,
+      }]}, options:baseOpts({scales:{x:{title:{display:true,text:'配速(min/km)'},reverse:true},y:{title:{display:true,text:'心率(bpm)'}}}})
+    });
+  }
+
+  // 热量趋势
+  const calRuns = runs.filter(w => w.active_cal > 0);
+  if (calRuns.length) {
+    charts.run5 = new Chart(document.getElementById('runChart5'), {
+      type:'bar', data:{ labels:calRuns.map(w=>w.date.slice(5)), datasets:[
+        {label:'活动热量(kcal)',data:calRuns.map(w=>Math.round(w.active_cal)),backgroundColor:'rgba(255,149,0,0.5)'},
+      ]}, options:baseOpts()
+    });
+  }
+
+  // 单次时长
+  charts.run6 = new Chart(document.getElementById('runChart6'), {
+    type:'bar', data:{ labels:runs.map(w=>w.date.slice(5)), datasets:[
+      {label:'时长(分钟)',data:runs.map(w=>+w.duration_min.toFixed(1)),backgroundColor:'rgba(129,140,248,0.5)'},
+    ]}, options:baseOpts()
+  });
+}
+
+// ── 通用运动 ──
+function renderGenericSportTab(key, pfx, range) {
+  const data = filterByRange(getWorkouts(key)).sort((a,b) => a.date.localeCompare(b.date));
+  if (!data.length) return;
+
+  // 单次时长趋势
+  charts[pfx+'C1'] = new Chart(document.getElementById(pfx+'C1'), {
+    type:'bar', data:{ labels:data.map(w=>w.date.slice(5)), datasets:[
+      {label:'时长(分钟)',data:data.map(w=>+w.duration_min.toFixed(1)),backgroundColor:'rgba(56,189,248,0.5)'},
+    ]}, options:baseOpts()
+  });
+
+  // 心率趋势
+  const hrData = data.filter(w => w.avg_hr);
+  if (hrData.length) {
+    const reg = linReg(hrData.map(w=>w.avg_hr));
+    charts[pfx+'C2'] = new Chart(document.getElementById(pfx+'C2'), {
+      type:'line', data:{ labels:hrData.map(w=>w.date.slice(5)), datasets:[
+        {label:'平均心率',data:hrData.map(w=>w.avg_hr),borderColor:CC.red,backgroundColor:'rgba(255,59,48,0.1)',fill:true,tension:0.3,pointRadius:3},
+        {label:'趋势线',data:reg.line,borderColor:CC.orange,borderDash:[6,3],pointRadius:0},
+      ]}, options:baseOpts()
+    });
+  }
+
+  // 每周频率
+  const weekFreq = {};
+  data.forEach(w => {
+    const wk = weekKeyFromDate(w.date);
+    weekFreq[wk] = (weekFreq[wk]||0) + 1;
+  });
+  const wks = Object.keys(weekFreq).sort();
+  if (wks.length) {
+    charts[pfx+'C3'] = new Chart(document.getElementById(pfx+'C3'), {
+      type:'bar', data:{ labels:wks.map(k=>k.slice(5)), datasets:[
+        {label:'每周次数',data:wks.map(k=>weekFreq[k]),backgroundColor:'rgba(52,211,153,0.5)'},
+      ]}, options:baseOpts()
+    });
+  }
+
+  // 活动热量
+  const calData = data.filter(w => w.active_cal > 0);
+  if (calData.length) {
+    charts[pfx+'C4'] = new Chart(document.getElementById(pfx+'C4'), {
+      type:'line', data:{ labels:calData.map(w=>w.date.slice(5)), datasets:[
+        {label:'活动热量(kcal)',data:calData.map(w=>Math.round(w.active_cal)),borderColor:CC.orange,backgroundColor:'rgba(251,146,60,0.15)',fill:true,tension:0.3,pointRadius:3},
+      ]}, options:baseOpts()
+    });
+  }
+}
+
 function renderBodyTab(range) {
   const rhrFiltered = Object.entries(DATA.resting_hr).filter(([d]) => d >= range.start && d <= range.end).sort((a,b) => a[0].localeCompare(b[0]));
   const hrvFiltered = Object.entries(DATA.hrv).filter(([d]) => d >= range.start && d <= range.end).sort((a,b) => a[0].localeCompare(b[0]));

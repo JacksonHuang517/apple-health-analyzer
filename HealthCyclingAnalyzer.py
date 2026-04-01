@@ -68,6 +68,7 @@ TRACKED_RECORDS = {
 WORKOUT_LABELS = {
     "HKWorkoutActivityTypeCycling": "骑行",
     "HKWorkoutActivityTypeTraditionalStrengthTraining": "力量训练",
+    "HKWorkoutActivityTypeFunctionalStrengthTraining": "力量训练",
     "HKWorkoutActivityTypeRunning": "跑步",
     "HKWorkoutActivityTypeWalking": "步行",
     "HKWorkoutActivityTypeSwimming": "游泳",
@@ -78,8 +79,101 @@ WORKOUT_LABELS = {
     "HKWorkoutActivityTypeCoreTraining": "核心训练",
     "HKWorkoutActivityTypeElliptical": "椭圆机",
     "HKWorkoutActivityTypeStairs": "爬楼",
+    "HKWorkoutActivityTypeYoga": "瑜伽",
+    "HKWorkoutActivityTypePilates": "普拉提",
+    "HKWorkoutActivityTypeTableTennis": "乒乓球",
+    "HKWorkoutActivityTypeTennis": "网球",
+    "HKWorkoutActivityTypeRowing": "划船",
+    "HKWorkoutActivityTypeDance": "舞蹈",
+    "HKWorkoutActivityTypeSoccer": "足球",
+    "HKWorkoutActivityTypeBasketball": "篮球",
+    "HKWorkoutActivityTypeMixedCardio": "混合有氧",
+    "HKWorkoutActivityTypeJumpRope": "跳绳",
+    "HKWorkoutActivityTypeSkatingSports": "滑冰",
+    "HKWorkoutActivityTypeSnowSports": "雪上运动",
+    "HKWorkoutActivityTypeSurfingSports": "冲浪",
+    "HKWorkoutActivityTypeMartialArts": "武术",
+    "HKWorkoutActivityTypeBoxing": "拳击",
+    "HKWorkoutActivityTypeKickboxing": "踢拳",
     "HKWorkoutActivityTypeOther": "其他",
 }
+
+WORKOUT_KEYS = {
+    "HKWorkoutActivityTypeCycling": "cycling",
+    "HKWorkoutActivityTypeRunning": "running",
+    "HKWorkoutActivityTypeTraditionalStrengthTraining": "strength",
+    "HKWorkoutActivityTypeFunctionalStrengthTraining": "strength",
+    "HKWorkoutActivityTypeWalking": "walking",
+    "HKWorkoutActivityTypeSwimming": "swimming",
+    "HKWorkoutActivityTypeBadminton": "badminton",
+    "HKWorkoutActivityTypeHighIntensityIntervalTraining": "hiit",
+    "HKWorkoutActivityTypeCoreTraining": "core",
+    "HKWorkoutActivityTypeElliptical": "elliptical",
+    "HKWorkoutActivityTypeStairs": "stairs",
+    "HKWorkoutActivityTypeClimbing": "climbing",
+    "HKWorkoutActivityTypeHiking": "hiking",
+    "HKWorkoutActivityTypeYoga": "yoga",
+    "HKWorkoutActivityTypePilates": "pilates",
+    "HKWorkoutActivityTypeTableTennis": "table_tennis",
+    "HKWorkoutActivityTypeTennis": "tennis",
+    "HKWorkoutActivityTypeRowing": "rowing",
+    "HKWorkoutActivityTypeDance": "dance",
+    "HKWorkoutActivityTypeSoccer": "soccer",
+    "HKWorkoutActivityTypeBasketball": "basketball",
+    "HKWorkoutActivityTypeMixedCardio": "mixed_cardio",
+    "HKWorkoutActivityTypeJumpRope": "jump_rope",
+    "HKWorkoutActivityTypeSkatingSports": "skating",
+    "HKWorkoutActivityTypeSnowSports": "snow_sports",
+    "HKWorkoutActivityTypeSurfingSports": "surfing",
+    "HKWorkoutActivityTypeMartialArts": "martial_arts",
+    "HKWorkoutActivityTypeBoxing": "boxing",
+    "HKWorkoutActivityTypeKickboxing": "kickboxing",
+    "HKWorkoutActivityTypeOther": "other",
+}
+
+KEY_LABELS = {
+    "cycling": "骑行",
+    "running": "跑步",
+    "strength": "力量训练",
+    "walking": "步行",
+    "swimming": "游泳",
+    "badminton": "羽毛球",
+    "hiit": "HIIT",
+    "core": "核心训练",
+    "elliptical": "椭圆机",
+    "stairs": "爬楼",
+    "climbing": "攀岩",
+    "hiking": "徒步",
+    "yoga": "瑜伽",
+    "pilates": "普拉提",
+    "table_tennis": "乒乓球",
+    "tennis": "网球",
+    "rowing": "划船",
+    "dance": "舞蹈",
+    "soccer": "足球",
+    "basketball": "篮球",
+    "mixed_cardio": "混合有氧",
+    "jump_rope": "跳绳",
+    "skating": "滑冰",
+    "snow_sports": "雪上运动",
+    "surfing": "冲浪",
+    "martial_arts": "武术",
+    "boxing": "拳击",
+    "kickboxing": "踢拳",
+    "other": "其他",
+}
+
+DEDICATED_WORKOUT_KEYS = frozenset({"cycling", "running", "strength"})
+
+
+def resolve_workout_key(wtype):
+    if wtype in WORKOUT_KEYS:
+        return WORKOUT_KEYS[wtype]
+    return wtype.split("Type")[-1].lower()
+
+
+def label_for_workout_key(wkey):
+    return KEY_LABELS.get(wkey, wkey.replace("_", " ").strip().title() or wkey)
 
 def find_xml(export_dir):
     for name in ["导出.xml", "export.xml"]:
@@ -92,7 +186,8 @@ def find_xml(export_dir):
     return None
 
 def parse_health_data(xml_path, export_dir, progress_cb=None):
-    cycling, strength, other = [], [], []
+    workouts = defaultdict(list)
+    legacy_other_raw = []
     records = {v: [] for v in TRACKED_RECORDS.values()}
     gpx_dir = os.path.join(export_dir, "workout-routes")
     depth = 0
@@ -126,8 +221,9 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
             hr = stats.get("HKQuantityTypeIdentifierHeartRate", {})
             active_cal = stats.get("HKQuantityTypeIdentifierActiveEnergyBurned", {})
             type_label = WORKOUT_LABELS.get(wtype, wtype.split("Type")[-1])
+            wkey = resolve_workout_key(wtype)
             w = {
-                "type": wtype, "label": type_label,
+                "type": wtype, "label": type_label, "key": wkey,
                 "date": start.strftime("%Y-%m-%d"), "weekday": start.isoweekday(),
                 "start_hour": start.hour, "duration_min": round(duration, 2),
                 "avg_hr": float(hr["average"]) if hr.get("average") else None,
@@ -136,22 +232,43 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
                 "active_cal": float(active_cal.get("sum", 0)) if active_cal.get("sum") else 0,
                 "route_path": route_path,
             }
-            if "Cycling" in wtype:
-                dc = stats.get("HKQuantityTypeIdentifierDistanceCycling", {})
+            dw = stats.get("HKQuantityTypeIdentifierDistanceWalkingRunning", {})
+            ds = stats.get("HKQuantityTypeIdentifierDistanceSwimming", {})
+            dc = stats.get("HKQuantityTypeIdentifierDistanceCycling", {})
+
+            if wkey == "cycling":
                 dist = float(dc.get("sum", 0)) if dc.get("sum") else 0
                 w["distance_km"] = round(dist, 3)
                 w["avg_speed_kmh"] = round((dist / (duration / 60)) if duration > 0 and dist > 0 else 0, 2)
                 w["elevation_cm"] = float(metadata.get("HKElevationAscended", "0 cm").split()[0]) if "HKElevationAscended" in metadata else 0
                 w["avg_mets"] = float(metadata.get("HKAverageMETs", "0 kcal").split()[0]) if "HKAverageMETs" in metadata else 0
-                cycling.append(w)
-            elif "StrengthTraining" in wtype:
+            elif wkey == "strength":
                 w["avg_mets"] = float(metadata.get("HKAverageMETs", "0 kcal").split()[0]) if "HKAverageMETs" in metadata else 0
-                strength.append(w)
+            elif wkey == "running":
+                dist = float(dw.get("sum", 0)) if dw.get("sum") else 0
+                w["distance_km"] = round(dist, 3)
+                if dist > 0 and duration > 0:
+                    w["avg_pace_min_km"] = round(duration / dist, 2)
+                    w["avg_speed_kmh"] = round(dist / (duration / 60), 2)
+                else:
+                    w["avg_pace_min_km"] = None
+                    w["avg_speed_kmh"] = 0.0
+            elif wkey == "swimming":
+                dist = float(ds.get("sum", 0)) if ds.get("sum") else 0
+                w["distance_km"] = round(dist, 3)
+            elif wkey in ("walking", "hiking"):
+                dist = float(dw.get("sum", 0)) if dw.get("sum") else 0
+                w["distance_km"] = round(dist, 3)
             else:
-                dw = stats.get("HKQuantityTypeIdentifierDistanceWalkingRunning", {})
-                ds = stats.get("HKQuantityTypeIdentifierDistanceSwimming", {})
-                w["distance_km"] = round((float(dw.get("sum", 0)) if dw.get("sum") else 0) + (float(ds.get("sum", 0)) if ds.get("sum") else 0), 3)
-                other.append(w)
+                d_walk = float(dw.get("sum", 0)) if dw.get("sum") else 0
+                d_swim = float(ds.get("sum", 0)) if ds.get("sum") else 0
+                dist = d_walk + d_swim
+                if dist > 0:
+                    w["distance_km"] = round(dist, 3)
+
+            workouts[wkey].append(w)
+            if wkey not in ("cycling", "strength"):
+                legacy_other_raw.append(w)
             elem.clear(); count += 1
             if progress_cb and count % 200 == 0:
                 progress_cb(f"已处理 {count} 条运动记录…")
@@ -170,8 +287,12 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
             elem.clear(); continue
         if depth <= 1: elem.clear()
 
+    cycling = workouts["cycling"]
+
     if progress_cb:
-        progress_cb(f"XML 解析完成: {len(cycling)} 骑行 · {len(strength)} 力训 · {len(other)} 其他")
+        n_st = len(workouts["strength"])
+        n_oth = len(legacy_other_raw)
+        progress_cb(f"XML 解析完成: {len(cycling)} 骑行 · {n_st} 力训 · {n_oth} 其他")
         progress_cb("正在解析 GPX 路线…")
 
     for w in cycling:
@@ -217,12 +338,37 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
         for r in rec_list: d[r["date"]] += r["value"]
         return {dt: round(v, 1) for dt, v in d.items()}
 
+    workout_types = []
+    workouts_out = {}
+    for wkey in sorted(workouts.keys(), key=lambda k: -len(workouts[k])):
+        lst = workouts[wkey]
+        if not lst:
+            continue
+        workouts_out[wkey] = lst
+        total_dur = int(round(sum(w["duration_min"] for w in lst)))
+        has_dist = any((w.get("distance_km") or 0) > 0 for w in lst)
+        has_hr = any(w.get("avg_hr") is not None for w in lst)
+        has_speed = wkey == "cycling"
+        workout_types.append({
+            "key": wkey,
+            "label": label_for_workout_key(wkey),
+            "count": len(lst),
+            "total_duration_min": total_dur,
+            "has_distance": has_dist,
+            "has_hr": has_hr,
+            "has_speed": has_speed,
+            "dedicated": wkey in DEDICATED_WORKOUT_KEYS,
+        })
+
     commute_id = 0 if clusters else -1
+    strength_list = workouts["strength"]
     return {
         "generated_at": datetime.now().isoformat(),
+        "workout_types": workout_types,
+        "workouts": workouts_out,
         "cycling": cycling,
-        "strength": [{k: w[k] for k in ("type","label","date","weekday","start_hour","duration_min","avg_hr","max_hr","min_hr","active_cal","avg_mets")} for w in strength],
-        "other": [{k: w.get(k) for k in ("type","label","date","weekday","start_hour","duration_min","distance_km","avg_hr","max_hr","active_cal")} for w in other],
+        "strength": [{k: w[k] for k in ("type","label","date","weekday","start_hour","duration_min","avg_hr","max_hr","min_hr","active_cal","avg_mets")} for w in strength_list],
+        "other": [{k: w.get(k) for k in ("type","label","date","weekday","start_hour","duration_min","distance_km","avg_hr","max_hr","active_cal")} for w in legacy_other_raw],
         "route_clusters": [{"id":i,"count":len(c["dates"]),"dates":c["dates"]} for i,c in enumerate(clusters[:10])],
         "commute_cluster_id": commute_id,
         "resting_hr": daily_avg(records["resting_hr"]),
