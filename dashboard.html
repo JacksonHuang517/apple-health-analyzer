@@ -800,7 +800,7 @@ function getDateRange() {
 
 function fmt(d) { return d.toISOString().slice(0, 10); }
 
-let _crossYear = false;
+var _crossYear = false;
 function updateCrossYear() {
   const range = getDateRange();
   _crossYear = range.start.slice(0, 4) !== range.end.slice(0, 4);
@@ -1845,7 +1845,7 @@ function renderBodyTab(range) {
   renderBodyCorrelation();
 }
 
-let _bodyFilterKeys = null;
+var _bodyFilterKeys = null;
 function getBodySelectedKeys() {
   if (_bodyFilterKeys) return _bodyFilterKeys;
   const checks = document.querySelectorAll('#bodyFilterChecks input[type=checkbox]');
