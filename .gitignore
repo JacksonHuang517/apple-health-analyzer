@@ -24,3 +24,10 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Xcode
+HealthAnalyzerApp/build/
+HealthAnalyzerApp/HealthAnalyzerApp.xcodeproj/xcuserdata/
+HealthAnalyzerApp/HealthAnalyzerApp.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate
+DerivedData/
