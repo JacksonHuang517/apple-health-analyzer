@@ -5,13 +5,15 @@
 <h1 align="center">Apple Health Analyzer</h1>
 
 <p align="center">
-  <strong>将 Apple Health 导出数据转化为精美的交互式分析仪表板</strong>
+  <strong>将 Apple Health 数据转化为精美的交互式分析仪表板 — 桌面端 + iOS 原生 App</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.8+-blue?logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/platform-macOS%20|%20Windows-lightgrey?logo=apple" />
+  <img src="https://img.shields.io/badge/swift-5.9+-F05138?logo=swift&logoColor=white" />
+  <img src="https://img.shields.io/badge/platform-macOS%20|%20Windows%20|%20iOS-lightgrey?logo=apple" />
   <img src="https://img.shields.io/badge/license-MIT-green" />
+  <img src="https://img.shields.io/badge/SwiftUI-Charts-blue?logo=swift" />
   <img src="https://img.shields.io/badge/chart.js-4.4-orange?logo=chartdotjs" />
 </p>
 
@@ -19,7 +21,19 @@
 
 ## 功能特性
 
-**一键解析** iPhone 健康数据导出（XML + GPX），自动生成一个完全自包含的 HTML 报告，双击即可打开 — 无需服务器、无需网络。
+### 🍎 iOS 原生 App（NEW）
+
+直接在 iPhone 上通过 **HealthKit API** 读取健康数据，无需手动导出 XML。
+
+- **原生 SwiftUI** 界面，Apple Health 风格设计
+- **Swift Charts** 交互式图表
+- 运动概览、身体指标、运动详情三大模块
+- 自动识别所有 Apple Watch 运动类型
+- 深色模式完美适配
+
+### 💻 桌面端
+
+**一键解析** iPhone 健康数据导出（XML + GPX），自动生成一个完全自包含的 HTML 报告，双击即可打开 — 无需服务器、无需网络。支持深色模式。
 
 ### 四大分析维度
 
@@ -40,6 +54,23 @@
 ---
 
 ## 截图演示
+
+### iOS App
+
+<p align="center">
+  <img src="screenshots/ios_light_summary.png" width="280" />
+  &nbsp;&nbsp;
+  <img src="screenshots/ios_dark_summary.png" width="280" />
+</p>
+<p align="center"><em>左：浅色模式 · 右：深色模式</em></p>
+
+### 桌面端 Dashboard
+
+<details>
+<summary><b>🌙 深色模式</b> — 全新深色主题，毛玻璃效果</summary>
+<br>
+<img src="screenshots/desktop_dark_full.png" width="800" />
+</details>
 
 <details>
 <summary><b>🚴 骑行分析</b> — 通勤均速、心率趋势、距离频率、心率效率</summary>
@@ -63,7 +94,58 @@
 
 ## 快速开始
 
-### 方式一：Python 脚本（推荐）
+### 方式一：iOS App（推荐 iPhone 用户）
+
+> 直接在 iPhone 上运行，通过 HealthKit API 读取数据，无需导出 XML。
+
+#### 环境要求
+
+- macOS + [Xcode 16+](https://developer.apple.com/xcode/)（含 iOS 17+ SDK）
+- Apple ID（免费个人开发者账号即可）
+- iPhone（iOS 17+）或 iOS Simulator
+
+#### 构建步骤
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/JacksonHuang517/apple-health-analyzer.git
+cd apple-health-analyzer/HealthAnalyzerApp
+
+# 2. 生成 Xcode 项目文件
+python3 generate_project.py
+
+# 3. 打开 Xcode 项目
+open HealthAnalyzerApp.xcodeproj
+```
+
+#### Xcode 配置（首次）
+
+1. 在 Xcode 左侧导航栏点击项目名称 **HealthAnalyzerApp**
+2. 选择 **Signing & Capabilities** 标签
+3. 勾选 **Automatically manage signing**
+4. **Team** 下拉选择你的 Apple ID（Personal Team）
+5. 如果 Bundle Identifier 冲突，改为 `com.你的名字.healthanalyzer`
+
+#### 运行到模拟器
+
+1. 顶部设备栏选择一个 iPhone 模拟器（如 **iPhone 17 Pro**）
+2. 点击 ▶️ 运行按钮（或菜单 Product → Run）
+3. 模拟器中会使用 Mock 数据展示完整 UI
+
+#### 运行到真机
+
+1. 用 **USB 线**连接 iPhone 到 Mac
+2. iPhone 上信任此电脑
+3. 顶部设备栏切换到你的 **iPhone**
+4. 点击 ▶️ 运行
+5. 首次运行需在 iPhone 上：**设置 → 通用 → VPN与设备管理** → 信任开发者证书
+6. App 启动后会请求 **HealthKit 授权**，允许后即可查看真实健康数据
+
+> 详细真机指南参见 [`HealthAnalyzerApp/REAL_DEVICE_GUIDE.md`](HealthAnalyzerApp/REAL_DEVICE_GUIDE.md)
+
+---
+
+### 方式二：Python 脚本（推荐桌面用户）
 
 ```bash
 # 1. 克隆仓库
@@ -87,7 +169,7 @@ python3 HealthCyclingAnalyzer.py
 3. 生成 `report.html`（自包含报告，双击即可查看）
 4. 自动在浏览器中打开报告
 
-### 方式二：macOS 桌面应用
+### 方式三：macOS 桌面应用
 
 ```bash
 # 安装依赖
@@ -99,7 +181,7 @@ pyinstaller build.spec --clean -y
 
 构建完成后在 `dist/` 目录下找到 `Apple Health Analyzer.app`，双击运行。
 
-### 方式三：Windows
+### 方式四：Windows
 
 ```bash
 # 直接运行批处理脚本（自动安装依赖并构建）
@@ -165,13 +247,25 @@ build_windows.bat
 
 ## 技术栈
 
+### iOS App
+
+| 组件 | 技术 |
+|------|------|
+| UI 框架 | SwiftUI（iOS 17+） |
+| 图表 | Swift Charts |
+| 健康数据 | HealthKit API |
+| 数据模型 | 原生 Swift 结构体 |
+| 设计风格 | Apple Health / Fitness 风格 |
+
+### 桌面端
+
 | 组件 | 技术 |
 |------|------|
 | 桌面 GUI | [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) — macOS / Windows 11 原生风格自适应 |
 | 数据解析 | Python 3 标准库（`xml.etree.ElementTree`） |
 | 路线分析 | Haversine 距离计算 + 坐标聚类 |
 | 可视化 | [Chart.js 4.4](https://www.chartjs.org/)（内嵌，零 CDN 依赖） |
-| 前端设计 | Apple Design 风格（SF Pro 字体、Apple Health 配色、圆角卡片） |
+| 前端设计 | Apple Design 风格 + 深色模式支持 |
 | 图标系统 | 内嵌 SVG 图标徽章（Lucide 风格） |
 | 拖拽支持 | [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2) — 文件夹拖放识别 |
 | 桌面打包 | PyInstaller |
@@ -182,11 +276,35 @@ build_windows.bat
 
 ```
 .
-├── HealthCyclingAnalyzer.py   # 核心解析与报告生成
-├── dashboard.html             # 仪表板 HTML 模板
-├── build.spec                 # PyInstaller 构建配置（macOS）
-├── build_windows.bat          # Windows 构建脚本
-├── screenshots/               # README 截图
+├── HealthCyclingAnalyzer.py        # 桌面端核心解析与报告生成
+├── dashboard.html                  # 桌面端仪表板 HTML 模板（支持深色模式）
+├── build.spec                      # PyInstaller 构建配置（macOS）
+├── build_windows.bat               # Windows 构建脚本
+├── HealthAnalyzerApp/              # iOS App
+│   ├── HealthAnalyzerApp/
+│   │   ├── App.swift               # App 入口
+│   │   ├── ContentView.swift       # 主视图控制器
+│   │   ├── Models/
+│   │   │   ├── HealthModels.swift  # 数据模型
+│   │   │   └── MockData.swift      # 模拟器测试数据
+│   │   ├── HealthKit/
+│   │   │   ├── HealthKitManager.swift      # HealthKit 数据读取
+│   │   │   ├── NativeDataTransformer.swift # HK → 原生模型转换
+│   │   │   └── DataTransformer.swift       # HK → JSON 转换（兼容）
+│   │   └── Views/
+│   │       ├── NativeDashboardView.swift   # 主仪表盘（Tab + 时间选择器）
+│   │       ├── OnboardingView.swift        # 引导页
+│   │       ├── LoadingView.swift           # 加载动画
+│   │       ├── Tabs/
+│   │       │   ├── SummaryTab.swift        # 运动概览
+│   │       │   ├── BodyTab.swift           # 身体指标
+│   │       │   └── WorkoutDetailTab.swift  # 运动详情
+│   │       └── Components/
+│   │           ├── MetricCard.swift        # 指标卡片组件
+│   │           └── ChartCards.swift        # 图表卡片组件
+│   ├── generate_project.py         # Xcode 项目文件生成器
+│   └── REAL_DEVICE_GUIDE.md        # 真机测试详细指南
+├── screenshots/                    # README 截图
 └── README.md
 ```
 
