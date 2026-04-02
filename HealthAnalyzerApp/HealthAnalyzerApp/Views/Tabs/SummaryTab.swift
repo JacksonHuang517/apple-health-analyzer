@@ -5,6 +5,7 @@ struct SummaryTab: View {
     let data: DashboardData
     @Binding var period: TimePeriod
     @Binding var selectedType: WorkoutType?
+    var onNavigateToWorkout: ((WorkoutType) -> Void)?
 
     private var filtered: [WorkoutRecord] { data.allWorkouts(in: period) }
 
@@ -77,7 +78,7 @@ struct SummaryTab: View {
                             isSelected: selectedType == type
                         ) {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                selectedType = selectedType == type ? nil : type
+                                onNavigateToWorkout?(type)
                             }
                         }
                     }

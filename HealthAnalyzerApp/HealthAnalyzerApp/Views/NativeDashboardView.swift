@@ -136,8 +136,14 @@ struct NativeDashboardView: View {
     @ViewBuilder
     private var tabContent: some View {
         TabView(selection: $selectedTab) {
-            SummaryTab(data: data, period: $period, selectedType: $selectedType)
-                .tag(0)
+            SummaryTab(data: data, period: $period, selectedType: $selectedType) { type in
+                if let idx = data.workoutTypes.firstIndex(of: type) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        selectedTab = idx + workoutTabOffset
+                    }
+                }
+            }
+            .tag(0)
             BodyTab(data: data, period: $period)
                 .tag(1)
             if hasSleep {
