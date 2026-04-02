@@ -55,8 +55,13 @@ struct LineChartCard: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: .day, count: max(data.count / 5, 1))) {
-                        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                    AxisMarks(values: .automatic(desiredCount: min(max(data.count / adaptiveStride, 3), 6))) { value in
+                        AxisValueLabel {
+                            if let date = value.as(Date.self) {
+                                Text(adaptiveDateLabel(date))
+                                    .font(.system(size: 9))
+                            }
+                        }
                     }
                 }
                 .chartYAxis {
@@ -74,6 +79,27 @@ struct LineChartCard: View {
         }
         .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var adaptiveStride: Int {
+        let count = data.count
+        if count <= 14 { return 2 }
+        if count <= 30 { return 5 }
+        if count <= 90 { return 15 }
+        if count <= 180 { return 30 }
+        return 60
+    }
+
+    private func adaptiveDateLabel(_ date: Date) -> String {
+        let f = DateFormatter()
+        if data.count > 180 {
+            f.dateFormat = "yy/M"
+        } else if data.count > 60 {
+            f.dateFormat = "M/d"
+        } else {
+            f.dateFormat = "M/d"
+        }
+        return f.string(from: date)
     }
 
     private var emptyState: some View {

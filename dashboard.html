@@ -819,7 +819,7 @@ function destroyCharts() {
 }
 
 function baseOpts(extra = {}) {
-  return {
+  const base = {
     responsive: true, maintainAspectRatio: false,
     plugins: {
       legend: {
@@ -831,18 +831,41 @@ function baseOpts(extra = {}) {
     },
     scales: {
       x: {
-        ticks: { color: CC.text, font: { size: 10 } },
+        ticks: { color: CC.text, font: { size: 10 }, maxTicksLimit: 10, autoSkip: true, maxRotation: 45, minRotation: 0 },
         grid: { color: CC.grid },
-        border: { color: 'rgba(0,0,0,0.08)' },
+        border: { color: _dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' },
       },
       y: {
         ticks: { color: CC.text, font: { size: 10 } },
         grid: { color: CC.grid },
-        border: { color: 'rgba(0,0,0,0.08)' },
+        border: { color: _dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)' },
       },
     },
-    ...extra,
   };
+  if (extra.scales) {
+    for (const axis of Object.keys(extra.scales)) {
+      base.scales[axis] = deepMerge(base.scales[axis] || {}, extra.scales[axis]);
+    }
+    delete extra.scales;
+  }
+  if (extra.plugins) {
+    for (const p of Object.keys(extra.plugins)) {
+      base.plugins[p] = deepMerge(base.plugins[p] || {}, extra.plugins[p]);
+    }
+    delete extra.plugins;
+  }
+  return { ...base, ...extra };
+}
+function deepMerge(target, source) {
+  const out = { ...target };
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key]) && target[key] && typeof target[key] === 'object') {
+      out[key] = deepMerge(target[key], source[key]);
+    } else {
+      out[key] = source[key];
+    }
+  }
+  return out;
 }
 
 function destroyKeys(prefixes) {
@@ -1065,7 +1088,7 @@ function renderOverview(range, cycling, strength, other) {
     },
     options: baseOpts({
       scales: {
-        x: { ticks: { color: CC.text, maxTicksLimit: 24 } },
+        x: { ticks: { color: CC.text, maxTicksLimit: 12 } },
         y: { title: { display: true, text: '步', color: CC.text } },
       },
     }),
@@ -1088,7 +1111,7 @@ function renderOverview(range, cycling, strength, other) {
     },
     options: baseOpts({
       scales: {
-        x: { ticks: { color: CC.text, maxTicksLimit: 24 } },
+        x: { ticks: { color: CC.text, maxTicksLimit: 12 } },
         y: { title: { display: true, text: 'kcal', color: CC.text } },
       },
     }),
@@ -1388,7 +1411,7 @@ function renderCyclingTab(range, cycling, strength) {
     data: { labels: allRecovDates.map(d=>fmtLabel(d)), datasets: datasets6 },
     options: baseOpts({
       scales: {
-        x: { ticks:{color:CC.text,font:{size:9},maxTicksLimit:20}, grid:{color:CC.grid} },
+        x: { ticks:{color:CC.text,font:{size:9},maxTicksLimit:10}, grid:{color:CC.grid} },
         y: { ticks:{color:CC.text}, grid:{color:CC.grid}, title:{display:true,text:'bpm',color:CC.text} },
         y1: { position:'right', grid:{drawOnChartArea:false}, ticks:{color:CC.text}, title:{display:true,text:'ms',color:CC.text} },
       },
@@ -1666,7 +1689,7 @@ function renderBodyTab(range) {
     data: { labels: recovLab, datasets: dsBd1 },
     options: baseOpts({
       scales: {
-        x: { ticks:{color:CC.text,font:{size:9},maxTicksLimit:24}, grid:{color:CC.grid} },
+        x: { ticks:{color:CC.text,font:{size:9},maxTicksLimit:10}, grid:{color:CC.grid} },
         y: { ticks:{color:CC.text}, grid:{color:CC.grid}, title:{display:true,text:'bpm',color:CC.text} },
         y1: { position:'right', grid:{drawOnChartArea:false}, ticks:{color:CC.text}, title:{display:true,text:'ms',color:CC.text} },
       },
@@ -1717,7 +1740,7 @@ function renderBodyTab(range) {
     },
     options: baseOpts({
       scales: {
-        x: { ticks: { color: CC.text, maxTicksLimit: 28, font: { size: 9 } } },
+        x: { ticks: { color: CC.text, maxTicksLimit: 12, font: { size: 9 } } },
         y: { title: { display: true, text: '步', color: CC.text } },
       },
     }),
@@ -1732,7 +1755,7 @@ function renderBodyTab(range) {
     },
     options: baseOpts({
       scales: {
-        x: { ticks: { color: CC.text, maxTicksLimit: 24 } },
+        x: { ticks: { color: CC.text, maxTicksLimit: 12 } },
         y: { title: { display: true, text: 'kcal', color: CC.text } },
       },
     }),

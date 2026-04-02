@@ -28,6 +28,20 @@ struct WorkoutDetailTab: View {
     private var hasHR: Bool { workouts.contains { $0.avgHR != nil } }
     private var hasDistance: Bool { workouts.contains { $0.distanceKm != nil } }
 
+    private var xAxisStride: Int {
+        let c = workouts.count
+        if c <= 14 { return 2 }
+        if c <= 30 { return 5 }
+        if c <= 60 { return 10 }
+        return 20
+    }
+
+    private func xAxisDateLabel(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = workouts.count > 60 ? "M/d" : "M/d"
+        return f.string(from: date)
+    }
+
     // MARK: - Header
 
     private var headerSection: some View {
@@ -93,6 +107,16 @@ struct WorkoutDetailTab: View {
                 .cornerRadius(3)
             }
             .frame(height: 160)
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: min(max(workouts.count / xAxisStride, 3), 6))) { value in
+                    AxisValueLabel {
+                        if let date = value.as(Date.self) {
+                            Text(xAxisDateLabel(date))
+                                .font(.system(size: 9))
+                        }
+                    }
+                }
+            }
             .chartYAxis { AxisMarks(position: .leading) }
         }
         .padding(16)

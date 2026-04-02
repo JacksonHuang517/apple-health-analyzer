@@ -106,6 +106,12 @@ struct SummaryTab: View {
                     .cornerRadius(4)
                 }
                 .frame(height: 180)
+                .chartXAxis {
+                    AxisMarks(values: .automatic(desiredCount: min(weeklyData.count, 8))) { value in
+                        AxisValueLabel()
+                            .font(.system(size: 9))
+                    }
+                }
                 .chartYAxis {
                     AxisMarks(position: .leading)
                 }
