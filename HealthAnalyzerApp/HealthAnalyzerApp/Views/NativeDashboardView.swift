@@ -79,7 +79,8 @@ struct NativeDashboardView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.bar)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemBackground))
     }
 
     // MARK: - Tab Selector
@@ -115,7 +116,8 @@ struct NativeDashboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
             }
-            .background(Color(.systemGroupedBackground))
+            .frame(maxWidth: .infinity)
+            .background(Color(.systemBackground))
             .onChange(of: selectedTab) { _, newValue in
                 withAnimation { proxy.scrollTo(newValue, anchor: .center) }
             }
