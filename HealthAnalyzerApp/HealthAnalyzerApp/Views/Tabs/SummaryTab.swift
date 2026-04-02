@@ -13,6 +13,7 @@ struct SummaryTab: View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 20) {
                 headerSection
+                dailyStateCard
                 quickStats
                 workoutTypeSelector
                 weeklyVolumeChart
@@ -21,6 +22,56 @@ struct SummaryTab: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 30)
         }
+    }
+
+    // MARK: - Daily State
+
+    private var dailyStateCard: some View {
+        let hrvData = data.metrics(\.hrv, in: .month)
+        let rhrData = data.metrics(\.restingHR, in: .month)
+        let sleepArr = data.sleepData(in: .week)
+
+        let todayHRV = hrvData.last?.value
+        let avgHRV: Double? = hrvData.isEmpty ? nil : hrvData.map(\.value).reduce(0, +) / Double(hrvData.count)
+        let todayRHR = rhrData.last?.value
+        let avgRHR: Double? = rhrData.isEmpty ? nil : rhrData.map(\.value).reduce(0, +) / Double(rhrData.count)
+        let sleepQ: Double? = sleepArr.last?.qualityScore
+
+        let state = StateEvaluator.evaluate(
+            todayHRV: todayHRV, avgHRV: avgHRV,
+            todayRHR: todayRHR, avgRHR: avgRHR,
+            sleepQuality: sleepQ
+        )
+
+        let weekStates: [BodyState] = {
+            let cal = Calendar.current
+            let today = cal.startOfDay(for: Date())
+            var states: [BodyState] = []
+            for i in (0..<7).reversed() {
+                let day = cal.date(byAdding: .day, value: -i, to: today)!
+                let dayEnd = cal.date(byAdding: .day, value: 1, to: day)!
+
+                let dayHRV = hrvData.filter { $0.date >= day && $0.date < dayEnd }.first?.value
+                let dayRHR = rhrData.filter { $0.date >= day && $0.date < dayEnd }.first?.value
+                let daySleep = sleepArr.filter { $0.date >= day && $0.date < dayEnd }.first?.qualityScore
+
+                states.append(StateEvaluator.evaluate(
+                    todayHRV: dayHRV, avgHRV: avgHRV,
+                    todayRHR: dayRHR, avgRHR: avgRHR,
+                    sleepQuality: daySleep
+                ))
+            }
+            return states
+        }()
+
+        return DailyStateCard(
+            state: state,
+            todayHRV: todayHRV,
+            avgHRV: avgHRV,
+            todayRHR: todayRHR,
+            sleepQuality: sleepQ,
+            weekStates: weekStates
+        )
     }
 
     // MARK: - Header

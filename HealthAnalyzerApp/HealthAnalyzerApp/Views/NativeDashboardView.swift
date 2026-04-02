@@ -7,6 +7,7 @@ struct NativeDashboardView: View {
     @State private var selectedTab = 0
     @State private var period: TimePeriod = .threeMonths
     @State private var selectedType: WorkoutType?
+    @State private var showSettings = false
     @Namespace private var tabAnimation
 
     private var hasSleep: Bool { !data.health.sleep.isEmpty }
@@ -47,6 +48,13 @@ struct NativeDashboardView: View {
                             .font(.headline)
                     }
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showSettings = true } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     if let onRefresh {
                         Button(action: onRefresh) {
@@ -55,6 +63,9 @@ struct NativeDashboardView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showSettings) {
+                NotificationSettingsView()
             }
         }
     }

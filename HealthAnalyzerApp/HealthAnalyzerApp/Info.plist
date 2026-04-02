@@ -24,6 +24,11 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 	<key>NSHealthShareUsageDescription</key>
 	<string>此应用需要读取您的健康数据以生成运动分析报告，数据仅在本地处理，不会上传到任何服务器。</string>
 	<key>UIApplicationSceneManifest</key>
