@@ -19,6 +19,20 @@
 
 ---
 
+## 下载安装
+
+| 平台 | 方式 | 说明 |
+|------|------|------|
+| **iOS** | [源码构建](#方式一ios-app推荐-iphone-用户) | 通过 Xcode 编译安装到 iPhone，直接读取 HealthKit 数据 |
+| **macOS** | [源码运行](#方式二python-脚本推荐桌面用户) | `python3 HealthCyclingAnalyzer.py` 一键分析 |
+| **Windows** | [源码运行](#方式二python-脚本推荐桌面用户) | 同上，支持 Windows 10/11 |
+| **macOS App** | [本地构建](#方式三macos-桌面应用) | PyInstaller 打包为 .app |
+| **Windows App** | [本地构建](#方式四windows) | 批处理脚本自动构建 .exe |
+
+> 📦 预编译安装包将在后续 [Releases](https://github.com/JacksonHuang517/apple-health-analyzer/releases) 中提供
+
+---
+
 ## 功能特性
 
 ### 🍎 iOS 原生 App（NEW）
