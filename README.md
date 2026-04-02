@@ -35,28 +35,39 @@
 
 ## 功能特性
 
-### 🍎 iOS 原生 App（NEW）
+### 🍎 iOS 原生 App
 
 直接在 iPhone 上通过 **HealthKit API** 读取健康数据，无需手动导出 XML。
 
 - **原生 SwiftUI** 界面，Apple Health 风格设计
 - **Swift Charts** 交互式图表
-- 运动概览、身体指标、运动详情三大模块
+- **运动概览** · **身体指标** · **睡眠分析** · **运动详情** 四大模块
 - 自动识别所有 Apple Watch 运动类型
 - 深色模式完美适配
+
+#### 🆕 v3.3 新增数据类型
+| 类别 | 指标 |
+|------|------|
+| 🦶 步态分析 | 步伐不对称性 · 双脚支撑时间 · 步行速度 · 步长 |
+| 🫁 呼吸 | 呼吸频率 |
+| ⚖️ 身体成分 | 体脂率 · BMI |
+| 🏃 活动 | 站立时间 · 步行+跑步距离 |
+| 😴 睡眠 | 总睡眠时长 · 深度/REM/核心/清醒阶段 · 睡眠质量评分 |
+| 📊 关联分析 | 运动强度 vs 睡眠质量/深度睡眠 · 高低强度日对比 |
 
 ### 💻 桌面端
 
 **一键解析** iPhone 健康数据导出（XML + GPX），自动生成一个完全自包含的 HTML 报告，双击即可打开 — 无需服务器、无需网络。支持深色模式。
 
-### 四大分析维度
+### 五大分析维度
 
 | 维度 | 分析内容 |
 |------|---------|
-| **总览** | 运动类型时长分布、每周运动总时长、VO2 Max 趋势、体重变化、每日步数与活动热量 |
+| **总览** | 运动类型时长分布、每周运动总时长、VO2 Max 趋势、体重变化、每日步数与活动热量、跨运动关联分析 |
 | **骑行** | 通勤路线自动识别、均速趋势与线性回归、心率趋势、每周距离/频率、心率效率散点、力训干扰分析、骑行日状态评分 |
 | **力量训练** | 每周频率与总时长、平均心率趋势、单次时长趋势、活动热量趋势、力训次数 vs 骑行均速关联 |
-| **身体趋势** | 静息心率 & HRV 双轴图、VO2 Max 含线性趋势线、体重趋势、步行心率、每日步数、活动热量 |
+| **身体趋势** | 核心指标（心率/HRV/VO2Max/呼吸）· 运动能力（步态分析）· 身体成分（体重/体脂/BMI）· 活动量（步数/热量/距离） |
+| **😴 睡眠分析** | 每日睡眠时长、睡眠阶段构成（深度/REM/核心/清醒）、睡眠质量评分趋势、运动强度 vs 睡眠关联分析 |
 
 ### 交互功能
 
@@ -252,10 +263,12 @@ build_windows.bat
 | 静息心率 | `RestingHeartRate` |
 | 心率变异性 (HRV) | `HeartRateVariabilitySDNN` |
 | VO2 Max | `VO2Max` |
-| 体重 | `BodyMass` |
-| 步数 | `StepCount` |
-| 活动热量 | `ActiveEnergyBurned` |
-| 步行心率 | `WalkingHeartRateAverage` |
+| 体重 / 体脂率 / BMI | `BodyMass` / `BodyFatPercentage` / `BodyMassIndex` |
+| 步数 / 站立时间 | `StepCount` / `AppleStandTime` |
+| 活动热量 / 饮食热量 | `ActiveEnergyBurned` / `DietaryEnergyConsumed` |
+| 步行心率 / 呼吸频率 | `WalkingHeartRateAverage` / `RespiratoryRate` |
+| 步伐不对称性 / 步行速度 / 步长 | `WalkingAsymmetryPercentage` / `WalkingSpeed` / `WalkingStepLength` |
+| 睡眠（深度/REM/核心/清醒） | `SleepAnalysis`（HKCategoryTypeIdentifier） |
 
 ---
 
@@ -311,7 +324,8 @@ build_windows.bat
 │   │       ├── LoadingView.swift           # 加载动画
 │   │       ├── Tabs/
 │   │       │   ├── SummaryTab.swift        # 运动概览
-│   │       │   ├── BodyTab.swift           # 身体指标
+│   │       │   ├── BodyTab.swift           # 身体指标（4子分类）
+│   │       │   ├── SleepTab.swift          # 睡眠分析 + 运动关联
 │   │       │   └── WorkoutDetailTab.swift  # 运动详情
 │   │       └── Components/
 │   │           ├── MetricCard.swift        # 指标卡片组件
