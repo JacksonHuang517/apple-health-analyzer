@@ -9,16 +9,23 @@ struct NativeDashboardView: View {
     @State private var selectedType: WorkoutType?
     @Namespace private var tabAnimation
 
+    private var hasSleep: Bool { !data.health.sleep.isEmpty }
+
     private var tabs: [TabItem] {
         var items: [TabItem] = [
             TabItem(title: "概览", icon: "square.grid.2x2.fill", color: .accentColor),
             TabItem(title: "身体", icon: "heart.text.clipboard.fill", color: .red),
         ]
+        if hasSleep {
+            items.append(TabItem(title: "睡眠", icon: "bed.double.fill", color: .indigo))
+        }
         for type in data.workoutTypes {
             items.append(TabItem(title: type.rawValue, icon: type.icon, color: type.color))
         }
         return items
     }
+
+    private var workoutTabOffset: Int { hasSleep ? 3 : 2 }
 
     var body: some View {
         NavigationStack {
@@ -133,9 +140,13 @@ struct NativeDashboardView: View {
                 .tag(0)
             BodyTab(data: data, period: $period)
                 .tag(1)
+            if hasSleep {
+                SleepTab(data: data, period: $period)
+                    .tag(2)
+            }
             ForEach(Array(data.workoutTypes.enumerated()), id: \.offset) { offset, type in
                 WorkoutDetailTab(data: data, type: type, period: $period)
-                    .tag(offset + 2)
+                    .tag(offset + workoutTabOffset)
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))

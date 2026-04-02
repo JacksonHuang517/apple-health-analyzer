@@ -4,7 +4,6 @@ import CoreLocation
 final class HealthKitManager {
     private let store = HKHealthStore()
 
-    // All quantity types we read (matching Python TRACKED_RECORDS)
     private static let quantityTypes: [(HKQuantityTypeIdentifier, String)] = [
         (.restingHeartRate, "resting_hr"),
         (.heartRateVariabilitySDNN, "hrv"),
@@ -18,11 +17,24 @@ final class HealthKitManager {
         (.dietaryProtein, "protein"),
         (.dietaryEnergyConsumed, "dietary_energy"),
         (.appleExerciseTime, "exercise_time"),
+        // Mobility & gait
+        (.walkingAsymmetryPercentage, "walk_asymmetry"),
+        (.walkingDoubleSupportPercentage, "walk_double_support"),
+        (.walkingSpeed, "walk_speed"),
+        (.walkingStepLength, "walk_step_length"),
+        // Respiratory
+        (.respiratoryRate, "respiratory_rate"),
+        // Body composition
+        (.bodyFatPercentage, "body_fat"),
+        (.bodyMassIndex, "bmi"),
+        // Activity
+        (.appleStandTime, "stand_time"),
+        (.distanceWalkingRunning, "walk_run_distance"),
     ]
 
-    // Types that should be summed per day (not averaged)
     private static let sumKeys: Set<String> = [
-        "steps", "active_energy", "protein", "dietary_energy", "exercise_time"
+        "steps", "active_energy", "protein", "dietary_energy", "exercise_time",
+        "stand_time", "walk_run_distance"
     ]
 
     // MARK: - Authorization
@@ -41,12 +53,14 @@ final class HealthKitManager {
         }
 
         readTypes.insert(HKObjectType.workoutType())
-
         readTypes.insert(HKSeriesType.workoutRoute())
 
-        // Heart rate for workout statistics
         if let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) {
             readTypes.insert(hrType)
+        }
+
+        if let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
+            readTypes.insert(sleepType)
         }
 
         try await store.requestAuthorization(toShare: [], read: readTypes)
@@ -166,28 +180,104 @@ final class HealthKitManager {
         }
     }
 
+    // MARK: - Sleep
+
+    struct SleepRecord: Identifiable {
+        let id = UUID()
+        let date: Date
+        var inBedMin: Double = 0
+        var asleepMin: Double = 0
+        var deepMin: Double = 0
+        var remMin: Double = 0
+        var coreMin: Double = 0
+        var awakeMin: Double = 0
+    }
+
+    func fetchSleepData() async throws -> [SleepRecord] {
+        guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else { return [] }
+        let twoYearsAgo = Calendar.current.date(byAdding: .year, value: -2, to: Date())!
+        let predicate = HKQuery.predicateForSamples(withStart: twoYearsAgo, end: Date(), options: .strictStartDate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+
+        let samples: [HKCategorySample] = try await withCheckedThrowingContinuation { cont in
+            let query = HKSampleQuery(sampleType: sleepType, predicate: predicate,
+                                       limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, results, error in
+                if let error { cont.resume(throwing: error); return }
+                cont.resume(returning: (results as? [HKCategorySample]) ?? [])
+            }
+            store.execute(query)
+        }
+
+        let cal = Calendar.current
+        let df = DateFormatter()
+        df.dateFormat = "yyyy-MM-dd"
+
+        var byDate: [String: SleepRecord] = [:]
+
+        for sample in samples {
+            let sleepDate = cal.startOfDay(for: sample.startDate)
+            let key = df.string(from: sleepDate)
+            let dur = sample.endDate.timeIntervalSince(sample.startDate) / 60.0
+
+            if byDate[key] == nil {
+                byDate[key] = SleepRecord(date: sleepDate)
+            }
+
+            let val = HKCategoryValueSleepAnalysis(rawValue: sample.value)
+            switch val {
+            case .inBed:
+                byDate[key]!.inBedMin += dur
+            case .asleepUnspecified, .asleep:
+                byDate[key]!.asleepMin += dur
+            case .asleepDeep:
+                byDate[key]!.deepMin += dur
+            case .asleepREM:
+                byDate[key]!.remMin += dur
+            case .asleepCore:
+                byDate[key]!.coreMin += dur
+            case .awake:
+                byDate[key]!.awakeMin += dur
+            default:
+                break
+            }
+        }
+
+        return byDate.values.sorted { $0.date < $1.date }
+    }
+
     // MARK: - Helpers
 
     private static func preferredUnit(for identifier: HKQuantityTypeIdentifier) -> HKUnit {
         switch identifier {
-        case .restingHeartRate, .heartRateVariabilitySDNN, .walkingHeartRateAverage, .heartRateRecoveryOneMinute:
-            return identifier == .heartRateVariabilitySDNN ? .secondUnit(with: .milli) : .count().unitDivided(by: .minute())
+        case .restingHeartRate, .walkingHeartRateAverage, .heartRateRecoveryOneMinute:
+            return .count().unitDivided(by: .minute())
+        case .heartRateVariabilitySDNN:
+            return .secondUnit(with: .milli)
+        case .respiratoryRate:
+            return .count().unitDivided(by: .minute())
         case .vo2Max:
-            // mL/(kg·min)
             return HKUnit.literUnit(with: .milli)
                 .unitDivided(by: HKUnit.gramUnit(with: .kilo).unitMultiplied(by: .minute()))
-        case .bodyMass:
+        case .bodyMass, .leanBodyMass:
             return .gramUnit(with: .kilo)
         case .stepCount:
             return .count()
         case .activeEnergyBurned, .dietaryEnergyConsumed:
             return .kilocalorie()
-        case .oxygenSaturation:
+        case .oxygenSaturation, .bodyFatPercentage, .walkingAsymmetryPercentage, .walkingDoubleSupportPercentage:
             return .percent()
         case .dietaryProtein:
             return .gram()
-        case .appleExerciseTime:
+        case .appleExerciseTime, .appleStandTime:
             return .minute()
+        case .walkingSpeed:
+            return HKUnit.meter().unitDivided(by: .second())
+        case .walkingStepLength:
+            return .meter()
+        case .bodyMassIndex:
+            return .count()
+        case .distanceWalkingRunning:
+            return .meter()
         default:
             return .count()
         }

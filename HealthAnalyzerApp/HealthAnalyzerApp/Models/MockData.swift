@@ -61,12 +61,13 @@ enum MockData {
         }
 
         // Health metrics
-        var rhr: [DailyMetric] = []
-        var hrv: [DailyMetric] = []
-        var vo2: [DailyMetric] = []
-        var mass: [DailyMetric] = []
-        var steps: [DailyMetric] = []
-        var energy: [DailyMetric] = []
+        var rhr: [DailyMetric] = [], hrv: [DailyMetric] = [], vo2: [DailyMetric] = []
+        var mass: [DailyMetric] = [], steps: [DailyMetric] = [], energy: [DailyMetric] = []
+        var walkAsym: [DailyMetric] = [], walkDS: [DailyMetric] = []
+        var walkSpd: [DailyMetric] = [], walkLen: [DailyMetric] = []
+        var respRate: [DailyMetric] = [], bodyFat: [DailyMetric] = [], bmi: [DailyMetric] = []
+        var standT: [DailyMetric] = [], walkDist: [DailyMetric] = []
+        var sleepDays: [SleepDay] = []
 
         for dayOffset in 0..<90 {
             guard let date = cal.date(byAdding: .day, value: -dayOffset, to: now) else { continue }
@@ -76,19 +77,51 @@ enum MockData {
             hrv.append(DailyMetric(date: date, value: 38 + progress * 12 + .random(in: -5...5)))
             steps.append(DailyMetric(date: date, value: Double.random(in: 5000...13000)))
             energy.append(DailyMetric(date: date, value: Double.random(in: 300...800)))
+            respRate.append(DailyMetric(date: date, value: Double.random(in: 14...18)))
+            standT.append(DailyMetric(date: date, value: Double.random(in: 40...120)))
+            walkDist.append(DailyMetric(date: date, value: Double.random(in: 2000...8000)))
+
+            walkAsym.append(DailyMetric(date: date, value: Double.random(in: 3...12)))
+            walkDS.append(DailyMetric(date: date, value: Double.random(in: 24...32)))
+            walkSpd.append(DailyMetric(date: date, value: Double.random(in: 1.1...1.5)))
+            walkLen.append(DailyMetric(date: date, value: Double.random(in: 0.65...0.82)))
 
             if dayOffset % 3 == 0 {
                 vo2.append(DailyMetric(date: date, value: 42 + progress * 4 + .random(in: -1...1)))
             }
             if dayOffset % 7 == 0 {
                 mass.append(DailyMetric(date: date, value: 72 - progress * 2 + .random(in: -0.3...0.3)))
+                bodyFat.append(DailyMetric(date: date, value: 18 - progress * 2 + .random(in: -0.5...0.5)))
+                bmi.append(DailyMetric(date: date, value: 23.5 - progress * 0.8 + .random(in: -0.2...0.2)))
             }
+
+            // Sleep: simulate workout-heavy days having slightly less deep sleep
+            let hasWorkout = [2, 3, 4, 5, 6, 7].contains(cal.component(.weekday, from: date))
+            let totalSleep = Double.random(in: 340...480)
+            let deepRatio = hasWorkout ? Double.random(in: 0.12...0.20) : Double.random(in: 0.15...0.25)
+            let remRatio = Double.random(in: 0.18...0.28)
+            let coreRatio = 1.0 - deepRatio - remRatio - Double.random(in: 0.02...0.08)
+            let awake = Double.random(in: 5...30)
+            sleepDays.append(SleepDay(
+                date: date,
+                totalMin: totalSleep,
+                deepMin: totalSleep * deepRatio,
+                remMin: totalSleep * remRatio,
+                coreMin: totalSleep * coreRatio,
+                awakeMin: awake
+            ))
         }
 
         let health = HealthSnapshot(
             restingHR: rhr.reversed(), hrv: hrv.reversed(),
             vo2max: vo2.reversed(), bodyMass: mass.reversed(),
-            steps: steps.reversed(), activeEnergy: energy.reversed()
+            steps: steps.reversed(), activeEnergy: energy.reversed(),
+            walkAsymmetry: walkAsym.reversed(), walkDoubleSupport: walkDS.reversed(),
+            walkSpeed: walkSpd.reversed(), walkStepLength: walkLen.reversed(),
+            respiratoryRate: respRate.reversed(),
+            bodyFat: bodyFat.reversed(), bmi: bmi.reversed(),
+            standTime: standT.reversed(), walkRunDistance: walkDist.reversed(),
+            sleep: sleepDays.reversed()
         )
 
         return DashboardData(workouts: workouts, health: health, generatedAt: now)

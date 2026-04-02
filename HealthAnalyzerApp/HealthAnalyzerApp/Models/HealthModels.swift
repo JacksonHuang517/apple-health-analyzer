@@ -85,6 +85,34 @@ struct DailyMetric: Identifiable {
     }
 }
 
+struct SleepDay: Identifiable {
+    let id = UUID()
+    let date: Date
+    var totalMin: Double
+    var deepMin: Double
+    var remMin: Double
+    var coreMin: Double
+    var awakeMin: Double
+
+    var dateLabel: String {
+        let f = DateFormatter(); f.dateFormat = "M/d"
+        return f.string(from: date)
+    }
+
+    var qualityScore: Double {
+        guard totalMin > 0 else { return 0 }
+        let deepRatio = deepMin / totalMin
+        let remRatio = remMin / totalMin
+        let awakeRatio = awakeMin / max(totalMin, 1)
+        var score = 50.0
+        score += deepRatio * 150
+        score += remRatio * 100
+        score -= awakeRatio * 80
+        if totalMin >= 420 && totalMin <= 540 { score += 15 }
+        return min(max(score, 0), 100)
+    }
+}
+
 struct HealthSnapshot {
     var restingHR: [DailyMetric] = []
     var hrv: [DailyMetric] = []
@@ -92,6 +120,21 @@ struct HealthSnapshot {
     var bodyMass: [DailyMetric] = []
     var steps: [DailyMetric] = []
     var activeEnergy: [DailyMetric] = []
+    // Mobility
+    var walkAsymmetry: [DailyMetric] = []
+    var walkDoubleSupport: [DailyMetric] = []
+    var walkSpeed: [DailyMetric] = []
+    var walkStepLength: [DailyMetric] = []
+    // Respiratory
+    var respiratoryRate: [DailyMetric] = []
+    // Body composition
+    var bodyFat: [DailyMetric] = []
+    var bmi: [DailyMetric] = []
+    // Activity
+    var standTime: [DailyMetric] = []
+    var walkRunDistance: [DailyMetric] = []
+    // Sleep
+    var sleep: [SleepDay] = []
 
     var latestRestingHR: Double? { restingHR.last?.value }
     var latestHRV: Double? { hrv.last?.value }
@@ -100,6 +143,16 @@ struct HealthSnapshot {
     var avgSteps: Double? {
         guard !steps.isEmpty else { return nil }
         return steps.map(\.value).reduce(0, +) / Double(steps.count)
+    }
+    var latestBodyFat: Double? { bodyFat.last?.value }
+    var latestBMI: Double? { bmi.last?.value }
+    var avgSleepMin: Double? {
+        guard !sleep.isEmpty else { return nil }
+        return sleep.map(\.totalMin).reduce(0, +) / Double(sleep.count)
+    }
+    var avgSleepQuality: Double? {
+        guard !sleep.isEmpty else { return nil }
+        return sleep.map(\.qualityScore).reduce(0, +) / Double(sleep.count)
     }
 }
 
@@ -166,5 +219,10 @@ struct DashboardData {
     func metrics(_ keyPath: KeyPath<HealthSnapshot, [DailyMetric]>, in period: TimePeriod) -> [DailyMetric] {
         let start = period.startDate
         return health[keyPath: keyPath].filter { $0.date >= start }
+    }
+
+    func sleepData(in period: TimePeriod) -> [SleepDay] {
+        let start = period.startDate
+        return health.sleep.filter { $0.date >= start }
     }
 }

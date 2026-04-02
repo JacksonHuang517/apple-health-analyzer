@@ -135,15 +135,21 @@ class ContentViewModel: ObservableObject {
             loadingProgress = 0.4
             let records = try await healthKit.fetchAllHealthRecords()
 
+            loadingMessage = "正在读取睡眠数据..."
+            loadingProgress = 0.55
+            let sleepRecords = try await healthKit.fetchSleepData()
+
             loadingMessage = "正在读取骑行路线..."
-            loadingProgress = 0.6
-            let routes = try await healthKit.fetchWorkoutRoutes(for: workouts.filter {
+            loadingProgress = 0.7
+            let _ = try await healthKit.fetchWorkoutRoutes(for: workouts.filter {
                 $0.workoutActivityType == .cycling
             })
 
             loadingMessage = "正在转换数据..."
-            loadingProgress = 0.8
-            let nativeData = NativeDataTransformer.transform(workouts: workouts, records: records)
+            loadingProgress = 0.85
+            let nativeData = NativeDataTransformer.transform(
+                workouts: workouts, records: records, sleepRecords: sleepRecords
+            )
 
             loadingProgress = 1.0
             loadingMessage = "完成！"

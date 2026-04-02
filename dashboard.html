@@ -480,6 +480,7 @@ body {
   <button type="button" class="tab-btn active" data-tab="overview">总览</button>
   <span id="sportTabsContainer"></span>
   <button type="button" class="tab-btn" data-tab="body">身体趋势</button>
+  <button type="button" class="tab-btn" data-tab="sleep">睡眠分析</button>
 </div>
 
 <div id="loading">正在加载数据…</div>
@@ -526,6 +527,14 @@ body {
       <div class="chart-box"><h3 data-i="steps">每日步数</h3><canvas id="bdChart5"></canvas></div>
       <div class="chart-box"><h3 data-i="flame">活动热量趋势</h3><canvas id="bdChart6"></canvas></div>
     </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="walk">步伐不对称性</h3><canvas id="bdChartAsym"></canvas></div>
+      <div class="chart-box"><h3 data-i="wind">呼吸频率</h3><canvas id="bdChartResp"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="scale">体脂率 / BMI</h3><canvas id="bdChartFat"></canvas></div>
+      <div class="chart-box"><h3 data-i="steps">步行速度与步长</h3><canvas id="bdChartGait"></canvas></div>
+    </div>
     <div class="body-filter-bar" id="bodyFilterBar">
       <div style="width:100%;margin-bottom:6px;">
         <label data-i="search" style="font-weight:600;color:var(--text);font-size:14px;">跨运动关联分析</label>
@@ -541,6 +550,22 @@ body {
       <div class="chart-box"><h3 data-i="dumbbell">运动类型构成与体重变化</h3><canvas id="bdChart9"></canvas></div>
       <div class="chart-box"><h3 data-i="activity">高强度训练后恢复指标</h3><canvas id="bdChart10"></canvas></div>
     </div>
+  </div>
+  <!-- 睡眠分析 -->
+  <div id="sleep" class="tab-panel">
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="clock">每日睡眠时长</h3><canvas id="slpChart1"></canvas></div>
+      <div class="chart-box"><h3 data-i="heart">睡眠质量评分</h3><canvas id="slpChart2"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="pie">睡眠阶段构成</h3><canvas id="slpChart3"></canvas></div>
+      <div class="chart-box"><h3 data-i="bar">深度/REM/核心睡眠趋势</h3><canvas id="slpChart4"></canvas></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3 data-i="flame">运动热量 vs 睡眠时长</h3><canvas id="slpChart5"></canvas></div>
+      <div class="chart-box"><h3 data-i="zap">运动热量 vs 深度睡眠</h3><canvas id="slpChart6"></canvas></div>
+    </div>
+    <div class="section" id="sleepInsights"></div>
   </div>
 </div>
 
@@ -583,7 +608,8 @@ function normalizeData() {
     DATA.other = Object.entries(DATA.workouts).filter(([k]) => !skip.has(k)).flatMap(([,v]) => v);
   }
   if (!DATA.route_clusters) DATA.route_clusters = [];
-  ['resting_hr','hrv','vo2max','body_mass','steps','active_energy','walking_hr','hr_recovery','spo2','protein','dietary_energy','exercise_time'].forEach(k => { if (!DATA[k]) DATA[k] = {}; });
+  ['resting_hr','hrv','vo2max','body_mass','steps','active_energy','walking_hr','hr_recovery','spo2','resp_rate','protein','dietary_energy','exercise_time','walk_asymmetry','walk_double_support','walk_speed','walk_step_length','body_fat','bmi','stand_time','walk_run_distance'].forEach(k => { if (!DATA[k]) DATA[k] = {}; });
+  if (!DATA.sleep) DATA.sleep = {};
 }
 
 function init() {
@@ -701,6 +727,7 @@ function buildDynamicTabs() {
   });
 
   TAB_KEYS.push('body');
+  TAB_KEYS.push('sleep');
 }
 
 function switchTab(tabId) {
@@ -912,6 +939,9 @@ function renderTabContent(tabId) {
   } else if (tabId === 'body') {
     destroyKeys(['bd']);
     renderBodyTab(range);
+  } else if (tabId === 'sleep') {
+    destroyKeys(['slp']);
+    renderSleepTab(range);
   } else {
     const pfx = tabId.replace(/[^a-z0-9]/g,'');
     destroyKeys([pfx]);
@@ -1761,6 +1791,56 @@ function renderBodyTab(range) {
     }),
   });
 
+  // Walk asymmetry
+  const asymEnt = filterDateMap(DATA.walk_asymmetry);
+  if (asymEnt.length) {
+    charts.bdAsym = new Chart(document.getElementById('bdChartAsym'), {
+      type:'line', data:{ labels:asymEnt.map(([d])=>fmtLabel(d)),
+        datasets:[{label:'步伐不对称性(%)',data:asymEnt.map(([,v])=>(v*100).toFixed(1)),borderColor:CC.orange,backgroundColor:'rgba(251,146,60,0.1)',fill:true,tension:0.3,pointRadius:2}]
+      }, options:baseOpts({scales:{y:{title:{display:true,text:'%',color:CC.text}}}})
+    });
+  }
+
+  // Respiratory rate
+  const respEnt = filterDateMap(DATA.resp_rate);
+  if (respEnt.length) {
+    charts.bdResp = new Chart(document.getElementById('bdChartResp'), {
+      type:'line', data:{ labels:respEnt.map(([d])=>fmtLabel(d)),
+        datasets:[{label:'呼吸频率(次/分)',data:respEnt.map(([,v])=>v),borderColor:'#5856d6',backgroundColor:'rgba(88,86,214,0.08)',fill:true,tension:0.3,pointRadius:2}]
+      }, options:baseOpts({scales:{y:{title:{display:true,text:'次/分',color:CC.text}}}})
+    });
+  }
+
+  // Body fat + BMI
+  const fatEnt = filterDateMap(DATA.body_fat);
+  const bmiEnt = filterDateMap(DATA.bmi);
+  const fatBmiDates = [...new Set([...fatEnt.map(([d])=>d),...bmiEnt.map(([d])=>d)])].sort();
+  if (fatBmiDates.length) {
+    const fatMap = Object.fromEntries(fatEnt);
+    const bmiMap = Object.fromEntries(bmiEnt);
+    const dsFat = [{label:'体脂率(%)',data:fatBmiDates.map(d=>fatMap[d]?(fatMap[d]*100).toFixed(1):null),borderColor:CC.orange,tension:0.3,pointRadius:3,yAxisID:'y',spanGaps:true}];
+    if (bmiEnt.length) dsFat.push({label:'BMI',data:fatBmiDates.map(d=>bmiMap[d]??null),borderColor:CC.accent,tension:0.3,pointRadius:3,yAxisID:'y1',spanGaps:true});
+    charts.bdFat = new Chart(document.getElementById('bdChartFat'), {
+      type:'line', data:{labels:fatBmiDates.map(d=>fmtLabel(d)),datasets:dsFat},
+      options:baseOpts({scales:{y:{title:{display:true,text:'%',color:CC.text}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'BMI',color:CC.text}}}})
+    });
+  }
+
+  // Walk speed + step length
+  const spdEnt = filterDateMap(DATA.walk_speed);
+  const lenEnt = filterDateMap(DATA.walk_step_length);
+  const gaitDates = [...new Set([...spdEnt.map(([d])=>d),...lenEnt.map(([d])=>d)])].sort();
+  if (gaitDates.length) {
+    const spdMap = Object.fromEntries(spdEnt);
+    const lenMap = Object.fromEntries(lenEnt);
+    charts.bdGait = new Chart(document.getElementById('bdChartGait'), {
+      type:'line', data:{labels:gaitDates.map(d=>fmtLabel(d)),datasets:[
+        {label:'步行速度(m/s)',data:gaitDates.map(d=>spdMap[d]??null),borderColor:CC.accent,tension:0.3,pointRadius:2,yAxisID:'y',spanGaps:true},
+        {label:'步长(cm)',data:gaitDates.map(d=>lenMap[d]?(lenMap[d]*100).toFixed(0):null),borderColor:CC.green,tension:0.3,pointRadius:2,yAxisID:'y1',spanGaps:true},
+      ]}, options:baseOpts({scales:{y:{title:{display:true,text:'m/s',color:CC.text}},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'cm',color:CC.text}}}})
+    });
+  }
+
   buildBodyFilterChecks();
   renderBodyCorrelation();
 }
@@ -1929,6 +2009,130 @@ function renderBodyCorrelation() {
       });
     }
   }
+}
+
+function renderSleepTab(range) {
+  const sleepEntries = Object.entries(DATA.sleep)
+    .filter(([d]) => d >= range.start && d <= range.end)
+    .sort((a,b) => a[0].localeCompare(b[0]));
+
+  if (!sleepEntries.length) {
+    document.getElementById('sleepInsights').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:30px;">暂无睡眠数据</p>';
+    return;
+  }
+
+  const labels = sleepEntries.map(([d]) => fmtLabel(d));
+  const totalH = sleepEntries.map(([,s]) => (s.total / 60).toFixed(1));
+
+  function sleepQuality(s) {
+    if (!s.total) return 0;
+    const deepR = s.deep / s.total, remR = s.rem / s.total, awakeR = s.awake / Math.max(s.total, 1);
+    let score = 50 + deepR * 150 + remR * 100 - awakeR * 80;
+    if (s.total >= 420 && s.total <= 540) score += 15;
+    return Math.min(Math.max(score, 0), 100);
+  }
+
+  // Chart 1: Daily sleep duration
+  charts.slp1 = new Chart(document.getElementById('slpChart1'), {
+    type:'bar', data:{labels, datasets:[
+      {label:'睡眠时长(h)',data:totalH,backgroundColor:'rgba(88,86,214,0.5)',borderRadius:3}
+    ]}, options:baseOpts({scales:{y:{title:{display:true,text:'小时',color:CC.text}}}})
+  });
+
+  // Chart 2: Sleep quality score
+  const qScores = sleepEntries.map(([,s]) => Math.round(sleepQuality(s)));
+  charts.slp2 = new Chart(document.getElementById('slpChart2'), {
+    type:'line', data:{labels, datasets:[
+      {label:'睡眠质量',data:qScores,borderColor:'#5856d6',backgroundColor:'rgba(88,86,214,0.08)',fill:true,tension:0.3,pointRadius:2}
+    ]}, options:baseOpts({scales:{y:{min:0,max:100,title:{display:true,text:'分',color:CC.text}}}})
+  });
+
+  // Chart 3: Sleep stages pie
+  const avgDeep = sleepEntries.reduce((s,[,v])=>s+v.deep,0)/sleepEntries.length;
+  const avgRem = sleepEntries.reduce((s,[,v])=>s+v.rem,0)/sleepEntries.length;
+  const avgCore = sleepEntries.reduce((s,[,v])=>s+v.core,0)/sleepEntries.length;
+  const avgAwake = sleepEntries.reduce((s,[,v])=>s+v.awake,0)/sleepEntries.length;
+  charts.slp3 = new Chart(document.getElementById('slpChart3'), {
+    type:'doughnut', data:{
+      labels:['深度','REM','核心','清醒'],
+      datasets:[{data:[avgDeep,avgRem,avgCore,avgAwake].map(v=>Math.round(v)),
+        backgroundColor:['#0a84ff','#af52de','#5ac8fa','#ff9f0a'],borderWidth:0}]
+    }, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:CC.text}}}}
+  });
+
+  // Chart 4: Deep/REM/Core trends stacked
+  charts.slp4 = new Chart(document.getElementById('slpChart4'), {
+    type:'bar', data:{labels, datasets:[
+      {label:'深度',data:sleepEntries.map(([,s])=>Math.round(s.deep)),backgroundColor:'rgba(10,132,255,0.6)'},
+      {label:'REM',data:sleepEntries.map(([,s])=>Math.round(s.rem)),backgroundColor:'rgba(175,82,222,0.6)'},
+      {label:'核心',data:sleepEntries.map(([,s])=>Math.round(s.core)),backgroundColor:'rgba(90,200,250,0.4)'},
+    ]}, options:baseOpts({scales:{x:{stacked:true},y:{stacked:true,title:{display:true,text:'分钟',color:CC.text}}}})
+  });
+
+  // Exercise vs sleep correlation
+  const allWorkouts = Object.values(DATA.workouts || {}).flat();
+  const calByDate = {};
+  allWorkouts.filter(w => w.date >= range.start && w.date <= range.end).forEach(w => {
+    calByDate[w.date] = (calByDate[w.date]||0) + (w.active_cal||0);
+  });
+
+  const paired = sleepEntries.filter(([d]) => calByDate[d] && calByDate[d] > 0)
+    .map(([d,s]) => ({cal: calByDate[d], sleepH: s.total/60, deep: s.deep, quality: sleepQuality(s)}));
+
+  if (paired.length > 2) {
+    charts.slp5 = new Chart(document.getElementById('slpChart5'), {
+      type:'scatter', data:{datasets:[{
+        label:'运动热量 vs 睡眠', data:paired.map(p=>({x:Math.round(p.cal),y:+p.sleepH.toFixed(1)})),
+        backgroundColor:'rgba(88,86,214,0.5)',pointRadius:4
+      }]}, options:baseOpts({scales:{x:{title:{display:true,text:'活动热量(kcal)',color:CC.text}},y:{title:{display:true,text:'睡眠(h)',color:CC.text}}}})
+    });
+    charts.slp6 = new Chart(document.getElementById('slpChart6'), {
+      type:'scatter', data:{datasets:[{
+        label:'运动热量 vs 深睡', data:paired.map(p=>({x:Math.round(p.cal),y:Math.round(p.deep)})),
+        backgroundColor:'rgba(10,132,255,0.5)',pointRadius:4
+      }]}, options:baseOpts({scales:{x:{title:{display:true,text:'活动热量(kcal)',color:CC.text}},y:{title:{display:true,text:'深度睡眠(min)',color:CC.text}}}})
+    });
+  }
+
+  // Sleep insights
+  const insDiv = document.getElementById('sleepInsights');
+  const avgTotal = sleepEntries.reduce((s,[,v])=>s+v.total,0)/sleepEntries.length;
+  const avgQ = sleepEntries.reduce((s,[,v])=>s+sleepQuality(v),0)/sleepEntries.length;
+
+  let html = '<h2 data-i="search">运动与睡眠洞察</h2><div class="insight-grid">';
+
+  if (paired.length >= 4) {
+    const sorted = [...paired].sort((a,b) => a.cal - b.cal);
+    const mid = Math.floor(sorted.length / 2);
+    const lowCal = sorted.slice(0, mid), highCal = sorted.slice(mid);
+    const avgHiSleep = highCal.reduce((s,p)=>s+p.sleepH,0)/highCal.length;
+    const avgLoSleep = lowCal.reduce((s,p)=>s+p.sleepH,0)/lowCal.length;
+    const avgHiDeep = highCal.reduce((s,p)=>s+p.deep,0)/highCal.length;
+    const avgLoDeep = lowCal.reduce((s,p)=>s+p.deep,0)/lowCal.length;
+    const avgHiQ = highCal.reduce((s,p)=>s+p.quality,0)/highCal.length;
+    const avgLoQ = lowCal.reduce((s,p)=>s+p.quality,0)/lowCal.length;
+
+    const betterSleep = avgHiSleep > avgLoSleep;
+    html += `<div class="insight-card"><span class="dot" style="background:${betterSleep?'#30d158':'#ff9f0a'}"></span>高强度运动日平均睡眠 ${avgHiSleep.toFixed(1)}h，低强度日 ${avgLoSleep.toFixed(1)}h</div>`;
+    html += `<div class="insight-card"><span class="dot" style="background:${avgHiDeep>avgLoDeep?'#0a84ff':'#ff9f0a'}"></span>高强度日深度睡眠 ${Math.round(avgHiDeep)}min，低强度日 ${Math.round(avgLoDeep)}min</div>`;
+    html += `<div class="insight-card"><span class="dot" style="background:${avgHiQ>avgLoQ?'#ffcc00':'#888'}"></span>高强度日睡眠质量 ${Math.round(avgHiQ)}分，低强度日 ${Math.round(avgLoQ)}分</div>`;
+  }
+
+  // Rest day sleep
+  const restDays = sleepEntries.filter(([d]) => !calByDate[d] || calByDate[d] === 0);
+  if (restDays.length) {
+    const restSleep = restDays.reduce((s,[,v])=>s+v.total/60,0)/restDays.length;
+    html += `<div class="insight-card"><span class="dot" style="background:#5856d6"></span>休息日平均睡眠 ${restSleep.toFixed(1)}h</div>`;
+  }
+
+  html += `<div class="insight-card"><span class="dot" style="background:#5ac8fa"></span>平均睡眠 ${Math.floor(avgTotal/60)}h${Math.round(avgTotal%60)}m · 质量评分 ${Math.round(avgQ)}分</div>`;
+  html += `<div class="insight-card"><span class="dot" style="background:#0a84ff"></span>深度睡眠 ${Math.round(avgDeep)}min · REM ${Math.round(avgRem)}min</div>`;
+  html += '</div>';
+  insDiv.innerHTML = html;
+  insDiv.querySelectorAll('[data-i]').forEach(el => {
+    const sz = el.tagName === 'H2' ? 28 : 24;
+    el.insertAdjacentHTML('afterbegin', _mkIcon(el.dataset.i, sz));
+  });
 }
 
 function renderSportBodyInsights(sportKey, range) {

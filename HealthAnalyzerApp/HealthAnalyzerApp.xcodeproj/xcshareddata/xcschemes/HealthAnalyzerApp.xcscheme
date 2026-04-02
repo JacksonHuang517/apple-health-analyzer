@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "219E31D636434808A7369637"
+               BlueprintIdentifier = "9DFA87E4E713496A96CA1F44"
                BuildableName = "HealthAnalyzerApp.app"
                BlueprintName = "HealthAnalyzerApp"
                ReferencedContainer = "container:HealthAnalyzerApp.xcodeproj">
@@ -44,7 +44,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "219E31D636434808A7369637"
+            BlueprintIdentifier = "9DFA87E4E713496A96CA1F44"
             BuildableName = "HealthAnalyzerApp.app"
             BlueprintName = "HealthAnalyzerApp"
             ReferencedContainer = "container:HealthAnalyzerApp.xcodeproj">
@@ -61,7 +61,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "219E31D636434808A7369637"
+            BlueprintIdentifier = "9DFA87E4E713496A96CA1F44"
             BuildableName = "HealthAnalyzerApp.app"
             BlueprintName = "HealthAnalyzerApp"
             ReferencedContainer = "container:HealthAnalyzerApp.xcodeproj">

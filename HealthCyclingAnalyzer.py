@@ -63,6 +63,27 @@ TRACKED_RECORDS = {
     "HKQuantityTypeIdentifierDietaryProtein": "protein",
     "HKQuantityTypeIdentifierDietaryEnergyConsumed": "dietary_energy",
     "HKQuantityTypeIdentifierAppleExerciseTime": "exercise_time",
+    # Mobility / gait
+    "HKQuantityTypeIdentifierWalkingAsymmetryPercentage": "walk_asymmetry",
+    "HKQuantityTypeIdentifierWalkingDoubleSupportPercentage": "walk_double_support",
+    "HKQuantityTypeIdentifierWalkingSpeed": "walk_speed",
+    "HKQuantityTypeIdentifierWalkingStepLength": "walk_step_length",
+    # Body composition
+    "HKQuantityTypeIdentifierBodyFatPercentage": "body_fat",
+    "HKQuantityTypeIdentifierBodyMassIndex": "bmi",
+    # Activity
+    "HKQuantityTypeIdentifierAppleStandTime": "stand_time",
+    "HKQuantityTypeIdentifierDistanceWalkingRunning": "walk_run_distance",
+}
+
+SLEEP_VALUES = {
+    "HKCategoryValueSleepAnalysisInBed": "inBed",
+    "HKCategoryValueSleepAnalysisAsleepUnspecified": "asleep",
+    "HKCategoryValueSleepAnalysisAsleep": "asleep",
+    "HKCategoryValueSleepAnalysisAsleepDeep": "deep",
+    "HKCategoryValueSleepAnalysisAsleepREM": "rem",
+    "HKCategoryValueSleepAnalysisAsleepCore": "core",
+    "HKCategoryValueSleepAnalysisAwake": "awake",
 }
 
 WORKOUT_LABELS = {
@@ -189,6 +210,7 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
     workouts = defaultdict(list)
     legacy_other_raw = []
     records = {v: [] for v in TRACKED_RECORDS.values()}
+    sleep_raw = []
     gpx_dir = os.path.join(export_dir, "workout-routes")
     depth = 0
     context = ET.iterparse(xml_path, events=("start", "end"))
@@ -284,6 +306,16 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
                 if val:
                     try: records[bucket].append({"date": start.strftime("%Y-%m-%d"), "value": float(val)})
                     except ValueError: pass
+            if rtype == "HKCategoryTypeIdentifierSleepAnalysis":
+                try:
+                    s_start = parse_date(elem.get("startDate", ""))
+                    s_end = parse_date(elem.get("endDate", ""))
+                    s_val = elem.get("value", "")
+                    s_stage = SLEEP_VALUES.get(s_val)
+                    if s_stage:
+                        dur_min = (s_end - s_start).total_seconds() / 60.0
+                        sleep_raw.append({"date": s_start.strftime("%Y-%m-%d"), "stage": s_stage, "dur": dur_min})
+                except Exception: pass
             elem.clear(); continue
         if depth <= 1: elem.clear()
 
@@ -360,6 +392,22 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
             "dedicated": wkey in DEDICATED_WORKOUT_KEYS,
         })
 
+    # Aggregate sleep data by date
+    sleep_by_date = defaultdict(lambda: {"inBed": 0, "asleep": 0, "deep": 0, "rem": 0, "core": 0, "awake": 0})
+    for s in sleep_raw:
+        sleep_by_date[s["date"]][s["stage"]] += s["dur"]
+    sleep_daily = {}
+    for dt, stages in sleep_by_date.items():
+        total = stages["asleep"] + stages["deep"] + stages["rem"] + stages["core"]
+        if total > 0:
+            sleep_daily[dt] = {
+                "total": round(total, 1),
+                "deep": round(stages["deep"], 1),
+                "rem": round(stages["rem"], 1),
+                "core": round(stages["core"], 1),
+                "awake": round(stages["awake"], 1),
+            }
+
     commute_id = 0 if clusters else -1
     strength_list = workouts["strength"]
     return {
@@ -380,9 +428,21 @@ def parse_health_data(xml_path, export_dir, progress_cb=None):
         "walking_hr": daily_avg(records["walking_hr"]),
         "hr_recovery": daily_avg(records["hr_recovery"]),
         "spo2": daily_avg(records["spo2"]),
+        "resp_rate": daily_avg(records["resp_rate"]),
         "protein": daily_sum(records["protein"]),
         "dietary_energy": daily_sum(records["dietary_energy"]),
         "exercise_time": daily_sum(records["exercise_time"]),
+        # New metrics
+        "walk_asymmetry": daily_avg(records["walk_asymmetry"]),
+        "walk_double_support": daily_avg(records["walk_double_support"]),
+        "walk_speed": daily_avg(records["walk_speed"]),
+        "walk_step_length": daily_avg(records["walk_step_length"]),
+        "body_fat": daily_avg(records["body_fat"]),
+        "bmi": daily_avg(records["bmi"]),
+        "stand_time": daily_sum(records["stand_time"]),
+        "walk_run_distance": daily_sum(records["walk_run_distance"]),
+        # Sleep
+        "sleep": sleep_daily,
     }
 
 
