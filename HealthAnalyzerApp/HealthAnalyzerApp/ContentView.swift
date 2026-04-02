@@ -1,10 +1,22 @@
 import SwiftUI
+import HealthKit
 
-enum AppState {
+enum AppState: Equatable {
     case onboarding
     case loading
-    case dashboard(String) // JSON data string
+    case dashboard
     case error(String)
+
+    static func == (lhs: AppState, rhs: AppState) -> Bool {
+        switch (lhs, rhs) {
+        case (.onboarding, .onboarding), (.loading, .loading), (.dashboard, .dashboard):
+            return true
+        case (.error(let a), .error(let b)):
+            return a == b
+        default:
+            return false
+        }
+    }
 }
 
 struct ContentView: View {
@@ -21,17 +33,18 @@ struct ContentView: View {
                 LoadingView(progress: viewModel.loadingProgress, message: viewModel.loadingMessage)
                     .transition(.opacity)
 
-            case .dashboard(let json):
-                DashboardWebView(jsonData: json, onRefresh: viewModel.refreshData)
-                    .ignoresSafeArea(edges: .bottom)
-                    .transition(.opacity)
+            case .dashboard:
+                if let data = viewModel.dashboardData {
+                    NativeDashboardView(data: data, onRefresh: viewModel.refreshData)
+                        .transition(.opacity)
+                }
 
             case .error(let message):
                 ErrorView(message: message, onRetry: viewModel.refreshData)
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.4), value: viewModel.stateKey)
+        .animation(.easeInOut(duration: 0.4), value: viewModel.state)
     }
 }
 
@@ -72,24 +85,23 @@ class ContentViewModel: ObservableObject {
     @Published var state: AppState = .onboarding
     @Published var loadingProgress: Double = 0
     @Published var loadingMessage: String = "准备中..."
+    @Published var dashboardData: DashboardData?
 
     private let healthKit = HealthKitManager()
     private let hasCompletedOnboarding = "hasCompletedOnboarding"
 
-    var stateKey: String {
-        switch state {
-        case .onboarding: return "onboarding"
-        case .loading: return "loading"
-        case .dashboard: return "dashboard"
-        case .error: return "error"
-        }
-    }
-
     init() {
+        #if DEBUG && targetEnvironment(simulator)
+        // Use mock data in simulator
+        dashboardData = MockData.generate()
+        state = .dashboard
+        UserDefaults.standard.set(true, forKey: hasCompletedOnboarding)
+        #else
         if UserDefaults.standard.bool(forKey: hasCompletedOnboarding) {
             state = .loading
             Task { await loadData() }
         }
+        #endif
     }
 
     func onboardingComplete() {
@@ -99,9 +111,14 @@ class ContentViewModel: ObservableObject {
     }
 
     func refreshData() {
+        #if DEBUG && targetEnvironment(simulator)
+        dashboardData = MockData.generate()
+        state = .dashboard
+        #else
         state = .loading
         loadingProgress = 0
         Task { await loadData() }
+        #endif
     }
 
     private func loadData() async {
@@ -124,36 +141,18 @@ class ContentViewModel: ObservableObject {
                 $0.workoutActivityType == .cycling
             })
 
-            loadingMessage = "正在生成分析报告..."
+            loadingMessage = "正在转换数据..."
             loadingProgress = 0.8
-            let transformer = DataTransformer()
-            let json = try transformer.transform(workouts: workouts, records: records, routes: routes)
+            let nativeData = NativeDataTransformer.transform(workouts: workouts, records: records)
 
             loadingProgress = 1.0
             loadingMessage = "完成！"
             try await Task.sleep(for: .milliseconds(300))
 
-            state = .dashboard(json)
-
-            if let cacheURL = cacheURL {
-                try? json.write(to: cacheURL, atomically: true, encoding: .utf8)
-            }
+            dashboardData = nativeData
+            state = .dashboard
         } catch {
-            if let cached = loadCachedData() {
-                state = .dashboard(cached)
-            } else {
-                state = .error(error.localizedDescription)
-            }
+            state = .error(error.localizedDescription)
         }
-    }
-
-    private var cacheURL: URL? {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("health_data.json")
-    }
-
-    private func loadCachedData() -> String? {
-        guard let url = cacheURL else { return nil }
-        return try? String(contentsOf: url, encoding: .utf8)
     }
 }
